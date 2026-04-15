@@ -117,6 +117,8 @@ class MediaItem(_MediaItemBase):
     # optional fields below
     metadata: MediaItemMetadata = field(default_factory=MediaItemMetadata)
     favorite: bool = False
+    # rating: user rating on a 1-5 scale, None = unrated
+    rating: int | None = None
     position: int | None = None  # required for playlist tracks, optional for all other
     date_added: datetime | None = None  # when item was added to library/collection
 
