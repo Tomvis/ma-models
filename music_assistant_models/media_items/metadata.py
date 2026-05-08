@@ -70,6 +70,35 @@ class MediaItemChapter(DataClassDictMixin):
 
 
 @dataclass(kw_only=True)
+class ReviewSourceEntry(DataClassDictMixin):
+    """One source of critical reception for an album (AMG, TPS, …).
+
+    Carries the source's rating on its native scale (5pt for AMG, 10pt for TPS),
+    plus optional accolade flags pulled from custom file tags.
+    """
+
+    source: str  # short identifier, e.g. "AMG" or "TPS"
+    rating: float | None = None
+    # favorite: list-pick / personal-pick flag in lieu of a numeric rating
+    favorite: bool | None = None
+    # types: review kind labels, e.g. ["Review", "TYMHM"]
+    types: list[str] | None = None
+    # labels: accolade/award labels, e.g. ["AOTY-2024", "RECORD_OF_THE_MONTH"]
+    labels: list[str] | None = None
+    # authors: contributing reviewer/list-pick author names
+    authors: list[str] | None = None
+
+
+@dataclass(kw_only=True)
+class CriticalReception(DataClassDictMixin):
+    """Aggregated critical-reception metadata for a media item (album)."""
+
+    # Album-level Dynamic Range value (foobar2000 DR Meter convention).
+    dr: float | None = None
+    sources: list[ReviewSourceEntry] | None = None
+
+
+@dataclass(kw_only=True)
 class MediaItemMetadata(DataClassDictMixin):
     """Model for a MediaItem's metadata."""
 
@@ -95,6 +124,8 @@ class MediaItemMetadata(DataClassDictMixin):
     # chapters is a list of available chapters, sorted by position
     # most commonly used for audiobooks and podcast episodes
     chapters: list[MediaItemChapter] | None = None
+    # critical_reception: DR + per-source ratings/labels (album scope)
+    critical_reception: CriticalReception | None = None
     # last_refresh: timestamp the (full) metadata was last collected
     last_refresh: int | None = None
 

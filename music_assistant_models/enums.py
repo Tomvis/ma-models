@@ -581,12 +581,6 @@ class ProviderFeature(StrEnum):
     FAVORITE_AUDIOBOOKS_EDIT = "favorite_audiobooks_edit"
     FAVORITE_PODCASTS_EDIT = "favorite_podcasts_edit"
 
-    # rating edit feature per mediatype
-    # the provider supports setting a numeric rating (1-5 stars) on items
-    RATING_ARTISTS_EDIT = "rating_artists_edit"
-    RATING_ALBUMS_EDIT = "rating_albums_edit"
-    RATING_TRACKS_EDIT = "rating_tracks_edit"
-
     # if we can grab 'similar tracks' from the music provider or plugin
     # used to generate dynamic playlists
     SIMILAR_TRACKS = "similar_tracks"

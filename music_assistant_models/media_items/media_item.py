@@ -117,8 +117,14 @@ class MediaItem(_MediaItemBase):
     # optional fields below
     metadata: MediaItemMetadata = field(default_factory=MediaItemMetadata)
     favorite: bool = False
-    # rating: user rating on a 1-5 scale, None = unrated
-    rating: int | None = None
+    # listen_later: Roon-style "save for later" flag — independent of `favorite`.
+    # Storing it on MediaItem keeps the column-level model identical for any
+    # mediatype that wants to opt in (currently exposed for albums); other types
+    # default to False and are simply not surfaced in the UI.
+    listen_later: bool = False
+    # epoch seconds at the moment the listen-later flag was set; None when unset.
+    # Used for "newest first" sorting in dedicated listen-later views.
+    listen_later_added_at: int | None = None
     position: int | None = None  # required for playlist tracks, optional for all other
     date_added: datetime | None = None  # when item was added to library/collection
 
