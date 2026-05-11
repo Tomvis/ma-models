@@ -88,14 +88,37 @@ class ReviewSourceEntry(DataClassDictMixin):
     # authors: contributing reviewer/list-pick author names
     authors: list[str] | None = None
 
+    def __post_init__(self) -> None:
+        """Reject empty/None source — downstream filters key on the source string."""
+        if not self.source:
+            msg = "ReviewSourceEntry.source must be a non-empty string"
+            raise ValueError(msg)
+
 
 @dataclass(kw_only=True)
 class CriticalReception(DataClassDictMixin):
-    """Aggregated critical-reception metadata for a media item (album)."""
+    """Aggregated critical-reception metadata for a media item (album).
 
-    # Album-level Dynamic Range value (foobar2000 DR Meter convention).
-    dr: float | None = None
+    Note: the canonical Dynamic Range value lives on ``MediaItemMetadata.dynamic_range``
+    (measured from the audio). ``amg_dr`` here is the secondary, AMG-review-reported DR
+    kept alongside the rest of AMG's review-derived data.
+    """
+
+    # AMG-reported album DR, parsed from AMG's review metadata block. AMG-only —
+    # TPS doesn't extract DR. Not authoritative for filter/sort; see
+    # MediaItemMetadata.dynamic_range for the measured value used everywhere else.
+    amg_dr: float | None = None
     sources: list[ReviewSourceEntry] | None = None
+
+    def is_richer_than(self, other: CriticalReception | None) -> bool:
+        """True if self carries strictly more data than other."""
+        if other is None:
+            return True
+        if self.amg_dr is not None and other.amg_dr is None:
+            return True
+        new_sources = self.sources or []
+        cur_sources = other.sources or []
+        return len(new_sources) > len(cur_sources)
 
 
 @dataclass(kw_only=True)
@@ -124,8 +147,14 @@ class MediaItemMetadata(DataClassDictMixin):
     # chapters is a list of available chapters, sorted by position
     # most commonly used for audiobooks and podcast episodes
     chapters: list[MediaItemChapter] | None = None
-    # critical_reception: DR + per-source ratings/labels (album scope)
+    # critical_reception: per-source ratings/labels (album scope, review-derived)
     critical_reception: CriticalReception | None = None
+    # Dynamic Range (foobar2000 DR Meter convention). Measured from the audio file:
+    #   - on Album: the album-scope mean of measured track DRs (rounded)
+    #   - on Track: the per-track DR14 value
+    # This is the canonical DR used for filtering and sorting. AMG's review-reported
+    # DR is exposed separately as critical_reception.amg_dr.
+    dynamic_range: float | None = None
     # last_refresh: timestamp the (full) metadata was last collected
     last_refresh: int | None = None
 
@@ -152,6 +181,17 @@ class MediaItemMetadata(DataClassDictMixin):
             ):
                 # some fields are always allowed to be overwritten
                 # (such as popularity and last_refresh)
+                setattr(self, fld.name, new_val)
+            elif (
+                fld.name == "critical_reception"
+                and isinstance(new_val, CriticalReception)
+                and new_val.is_richer_than(
+                    cur_val if isinstance(cur_val, CriticalReception) else None
+                )
+            ):
+                # CR is a structured nested field: replace whenever the incoming
+                # value is strictly richer than the current one. A regression
+                # (e.g. transient probe failure that drops sources) loses.
                 setattr(self, fld.name, new_val)
             elif cur_val is None:
                 setattr(self, fld.name, new_val)
