@@ -157,3 +157,15 @@ class InvalidToken(MusicAssistantError):
     """Error raised when an access token is invalid or expired."""
 
     error_code = 23
+
+
+class AlreadyInLibraryError(MusicAssistantError):
+    """Error raised when adding a media item that is already in the library proper."""
+
+    error_code = 24
+
+
+class AlreadyInListenLaterError(MusicAssistantError):
+    """Error raised when adding a media item that is already marked as listen-later."""
+
+    error_code = 25
