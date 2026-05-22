@@ -159,13 +159,26 @@ class InvalidToken(MusicAssistantError):
     error_code = 23
 
 
+class ResourceBusyError(MusicAssistantError):
+    """
+    Raised when an exclusive resource is already in use.
+
+    Used by providers when a resource that only allows a single
+    concurrent consumer (e.g. an exclusive AudioSource, a hardware
+    bridge, or any other single-stream media item) is requested
+    while it is already in use elsewhere.
+    """
+
+    error_code = 24
+
+
 class AlreadyInLibraryError(MusicAssistantError):
     """Error raised when adding a media item that is already in the library proper."""
 
-    error_code = 24
+    error_code = 25
 
 
 class AlreadyInListenLaterError(MusicAssistantError):
     """Error raised when adding a media item that is already marked as listen-later."""
 
-    error_code = 25
+    error_code = 26
