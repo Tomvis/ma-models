@@ -102,7 +102,9 @@ class ReviewSourceEntry(DataClassDictMixin):
 
     def __post_init__(self) -> None:
         """Reject empty/None source — downstream filters key on the source string."""
-        if not self.source:
+        # mashumaro coerces wire-sent `null` into the literal string "None" before
+        # __post_init__ sees it, so we have to filter that too.
+        if not self.source or self.source == "None":
             msg = "ReviewSourceEntry.source must be a non-empty string"
             raise ValueError(msg)
 
@@ -123,13 +125,18 @@ class CriticalReception(DataClassDictMixin):
     sources: list[ReviewSourceEntry] | None = None
 
     def is_richer_than(self, other: CriticalReception | None) -> bool:
-        """True if self carries strictly more data than other."""
+        """True if self carries strictly more data than other and doesn't regress."""
         if other is None:
-            return True
-        if self.amg_dr is not None and other.amg_dr is None:
             return True
         new_sources = self.sources or []
         cur_sources = other.sources or []
+        # Regression on either dimension: stored copy is richer / equal.
+        if other.amg_dr is not None and self.amg_dr is None:
+            return False
+        if len(new_sources) < len(cur_sources):
+            return False
+        if self.amg_dr is not None and other.amg_dr is None:
+            return True
         return len(new_sources) > len(cur_sources)
 
 
@@ -196,17 +203,22 @@ class MediaItemMetadata(DataClassDictMixin):
                 # some fields are always allowed to be overwritten
                 # (such as popularity and last_refresh)
                 setattr(self, fld.name, new_val)
-            elif (
-                fld.name == "critical_reception"
-                and isinstance(new_val, CriticalReception)
-                and new_val.is_richer_than(
-                    cur_val if isinstance(cur_val, CriticalReception) else None
-                )
-            ):
-                # CR is a structured nested field: replace whenever the incoming
-                # value is strictly richer than the current one. A regression
-                # (e.g. transient probe failure that drops sources) loses.
-                setattr(self, fld.name, new_val)
+            elif fld.name == "critical_reception" and isinstance(new_val, CriticalReception):
+                # CR is a structured nested field: deep-merge rather than wholesale
+                # replace, so a partial probe (e.g. amg_dr only, sources unset) can't
+                # silently drop the existing sources list. Per-field rule: prefer the
+                # incoming value when populated, fall back to the stored one.
+                if isinstance(cur_val, CriticalReception):
+                    setattr(
+                        self,
+                        fld.name,
+                        CriticalReception(
+                            amg_dr=new_val.amg_dr if new_val.amg_dr is not None else cur_val.amg_dr,
+                            sources=new_val.sources or cur_val.sources,
+                        ),
+                    )
+                else:
+                    setattr(self, fld.name, new_val)
             elif cur_val is None:
                 setattr(self, fld.name, new_val)
         return self

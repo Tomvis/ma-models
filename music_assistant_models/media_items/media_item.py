@@ -118,9 +118,9 @@ class MediaItem(_MediaItemBase):
     metadata: MediaItemMetadata = field(default_factory=MediaItemMetadata)
     favorite: bool = False
     # listen_later: Roon-style "save for later" flag — independent of `favorite`.
-    # Storing it on MediaItem keeps the column-level model identical for any
-    # mediatype that wants to opt in (currently exposed for albums); other types
-    # default to False and are simply not surfaced in the UI.
+    # Lives on the base so the column-level model is identical for any mediatype
+    # that wants to opt in; the field rides on every subclass payload. Today only
+    # albums surface a UI affordance; other types default to False.
     listen_later: bool = False
     # epoch seconds at the moment the listen-later flag was set; None when unset.
     # Used for "newest first" sorting in dedicated listen-later views.
