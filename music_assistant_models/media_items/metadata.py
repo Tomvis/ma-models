@@ -122,7 +122,10 @@ class ReviewSourceEntry(DataClassDictMixin):
     plus optional accolade flags pulled from custom file tags.
     """
 
-    source: str  # short identifier, e.g. "AMG" or "TPS"
+    # short identifier, e.g. "AMG" or "TPS". Defaults to "" so a wire payload with
+    # a missing/blank/null source still deserializes (mashumaro would otherwise raise
+    # MissingField); CriticalReception.__post_init__ drops such unusable entries.
+    source: str = ""
     rating: float | None = None
     # favorite: list-pick / personal-pick flag in lieu of a numeric rating
     favorite: bool | None = None
@@ -132,14 +135,6 @@ class ReviewSourceEntry(DataClassDictMixin):
     labels: list[str] | None = None
     # authors: contributing reviewer/list-pick author names
     authors: list[str] | None = None
-
-    def __post_init__(self) -> None:
-        """Reject empty/None source — downstream filters key on the source string."""
-        # mashumaro coerces wire-sent `null` into the literal string "None" before
-        # __post_init__ sees it, so we have to filter that too.
-        if not self.source or self.source == "None":
-            msg = "ReviewSourceEntry.source must be a non-empty string"
-            raise ValueError(msg)
 
 
 @dataclass(kw_only=True)
@@ -157,20 +152,18 @@ class CriticalReception(DataClassDictMixin):
     amg_dr: float | None = None
     sources: list[ReviewSourceEntry] | None = None
 
-    def is_richer_than(self, other: CriticalReception | None) -> bool:
-        """True if self carries strictly more data than other and doesn't regress."""
-        if other is None:
-            return True
-        new_sources = self.sources or []
-        cur_sources = other.sources or []
-        # Regression on either dimension: stored copy is richer / equal.
-        if other.amg_dr is not None and self.amg_dr is None:
-            return False
-        if len(new_sources) < len(cur_sources):
-            return False
-        if self.amg_dr is not None and other.amg_dr is None:
-            return True
-        return len(new_sources) > len(cur_sources)
+    def __post_init__(self) -> None:
+        """Drop blank/None-sourced entries instead of failing the whole payload.
+
+        Downstream filters key on the source string, so an entry with an empty or
+        null source is unusable. mashumaro coerces a wire-sent ``null`` (or a missing
+        key) into the literal string "None" before we see it, so filter that too.
+        Dropping the bad row keeps deserialization total — a single corrupt entry
+        can't poison the enclosing Album/Track — matching the library's forward-
+        compatibility contract (cf. the enum ``_missing_`` convention).
+        """
+        if self.sources:
+            self.sources = [s for s in self.sources if s.source and s.source != "None"] or None
 
 
 @dataclass(kw_only=True)
