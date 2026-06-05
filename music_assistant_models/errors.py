@@ -172,13 +172,24 @@ class ResourceBusyError(MusicAssistantError):
     error_code = 24
 
 
+class RateLimited(ResourceTemporarilyUnavailable):
+    """
+    Error thrown when a provider is rate-limiting us (HTTP 429).
+
+    Unlike the base class, ``backoff_time`` (a server ``Retry-After``) is treated
+    as a floor rather than a target: the retry helper backs off exponentially above it.
+    """
+
+    error_code = 25
+
+
 class AlreadyInLibraryError(MusicAssistantError):
     """Error raised when adding a media item that is already in the library proper."""
 
-    error_code = 25
+    error_code = 26
 
 
 class AlreadyInListenLaterError(MusicAssistantError):
     """Error raised when adding a media item that is already marked as listen-later."""
 
-    error_code = 26
+    error_code = 27
