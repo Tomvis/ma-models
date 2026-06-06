@@ -114,12 +114,26 @@ class MediaItemChapter(DataClassDictMixin):
         return hash(self.position)
 
 
+@dataclass(frozen=True, kw_only=True)
+class ReviewLink(DataClassDictMixin):
+    """One labeled post link for a critical-reception source (TAG_SCHEMA_VERSION 3.3.0+).
+
+    One entry per post (not per honor): an album appearing in several writers' year-end
+    lists yields several entries that share a ``label`` but differ by ``url``. ``label``
+    mirrors a value from the source's ``accolades`` ("Review", "Album of the Year (2024)",
+    "Score Revised", …). Frozen so the richness-merge helpers can hash it for set membership.
+    """
+
+    label: str = ""
+    url: str = ""
+
+
 @dataclass(kw_only=True)
 class ReviewSourceEntry(DataClassDictMixin):
     """One source of critical reception for an album (AMG, TPS, …).
 
     Carries the source's rating on its native scale (5pt for AMG, 10pt for TPS),
-    plus optional accolade flags pulled from custom file tags.
+    plus optional editorial accolades and post links pulled from custom file tags.
     """
 
     # short identifier, e.g. "AMG" or "TPS". Defaults to "" so a wire payload with
@@ -129,12 +143,26 @@ class ReviewSourceEntry(DataClassDictMixin):
     rating: float | None = None
     # favorite: list-pick / personal-pick flag in lieu of a numeric rating
     favorite: bool | None = None
-    # types: review kind labels, e.g. ["Review", "TYMHM"]
-    types: list[str] | None = None
-    # labels: accolade/award labels, e.g. ["AOTY-2024", "RECORD_OF_THE_MONTH"]
-    labels: list[str] | None = None
+    # accolades: editorial honors as human-readable display strings, each appearing
+    # once with any date inlined, e.g. ["Review", "Album of the Year (2024)",
+    # "Record of the Month (Sep 2024)"] (TAG_SCHEMA_VERSION 3.2.0+).
+    accolades: list[str] | None = None
+    # links: one labeled post URL per post (TAG_SCHEMA_VERSION 3.3.0+). Each ``label``
+    # mirrors an ``accolades`` value, but several links can share a label (e.g. an
+    # Album of the Year honor appearing in multiple writers' year-end lists).
+    links: list[ReviewLink] | None = None
     # authors: contributing reviewer/list-pick author names
     authors: list[str] | None = None
+
+    # DEPRECATED (TAG_SCHEMA_VERSION <= 3.1.1): the separate review-kind / award-label
+    # lists, superseded by the merged ``accolades`` field above. Still accepted on the
+    # wire so pre-3.2.0 senders deserialize during the transition; the server folds them
+    # into ``accolades`` on ingest. Remove once all senders/files are re-tagged.
+    types: list[str] | None = None
+    labels: list[str] | None = None
+    # DEPRECATED (TAG_SCHEMA_VERSION <= 3.2.x): the single canonical review URL,
+    # superseded by ``links``. Folded into a single {"Review", url} link on ingest.
+    review_url: str | None = None
 
 
 @dataclass(kw_only=True)
@@ -194,7 +222,7 @@ class MediaItemMetadata(DataClassDictMixin):
     # chapters is a list of available chapters, sorted by position
     # most commonly used for audiobooks and podcast episodes
     chapters: list[MediaItemChapter] | None = None
-    # critical_reception: per-source ratings/labels (album scope, review-derived)
+    # critical_reception: per-source ratings/accolades (album scope, review-derived)
     critical_reception: CriticalReception | None = None
     # Dynamic Range (foobar2000 DR Meter convention). Measured from the audio file:
     #   - on Album: the album-scope mean of measured track DRs (rounded)
