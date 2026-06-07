@@ -121,7 +121,8 @@ class ReviewLink(DataClassDictMixin):
     One entry per post (not per honor): an album appearing in several writers' year-end
     lists yields several entries that share a ``label`` but differ by ``url``. ``label``
     mirrors a value from the source's ``accolades`` ("Review", "Album of the Year (2024)",
-    "Score Revised", …). Frozen so the richness-merge helpers can hash it for set membership.
+    "Score Revised", …). Frozen as an immutable value object; the richness-merge helpers
+    compare links by value via the per-source signature tuple.
     """
 
     label: str = ""
