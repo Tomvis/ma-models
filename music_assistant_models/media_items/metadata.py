@@ -121,8 +121,8 @@ class ReviewLink(DataClassDictMixin):
     One entry per post (not per honor): an album appearing in several writers' year-end
     lists yields several entries that share a ``label`` but differ by ``url``. ``label``
     mirrors a value from the source's ``accolades`` ("Review", "Album of the Year (2024)",
-    "Score Revised", …). Frozen as an immutable value object; the richness-merge helpers
-    compare links by value via the per-source signature tuple.
+    "Score Revised", …). Frozen as an immutable value object so it compares (and hashes)
+    by value — review-data comparisons that snapshot a source's links rely on that.
     """
 
     label: str = ""
@@ -195,6 +195,27 @@ class CriticalReception(DataClassDictMixin):
             self.sources = [s for s in self.sources if s.source and s.source != "None"] or None
 
 
+def _merge_review_sources(
+    cur: list[ReviewSourceEntry] | None,
+    new: list[ReviewSourceEntry] | None,
+) -> list[ReviewSourceEntry] | None:
+    """Union two critical-reception source lists by source name.
+
+    Keeps stored sources that the incoming list does not mention and lets the
+    incoming entry win for a source present on both sides. Either side being
+    empty/None falls back to the other, so a probe that only carries one source
+    (e.g. TPS) no longer drops the others (e.g. a stored AMG entry).
+    """
+    if not new:
+        return cur
+    if not cur:
+        return new
+    merged: dict[str, ReviewSourceEntry] = {s.source: s for s in cur}
+    for entry in new:
+        merged[entry.source] = entry
+    return list(merged.values())
+
+
 @dataclass(kw_only=True)
 class MediaItemMetadata(DataClassDictMixin):
     """Model for a MediaItem's metadata."""
@@ -264,22 +285,29 @@ class MediaItemMetadata(DataClassDictMixin):
             elif new_val and fld.name in (
                 "popularity",
                 "last_refresh",
+                # dynamic_range is a measured scalar: a re-probe/refresh should land,
+                # so always overwrite with the incoming value rather than only filling
+                # a None gap (otherwise a corrected DR could never replace a stale one).
+                "dynamic_range",
             ):
                 # some fields are always allowed to be overwritten
-                # (such as popularity and last_refresh)
+                # (such as popularity, last_refresh and dynamic_range)
                 setattr(self, fld.name, new_val)
             elif fld.name == "critical_reception" and isinstance(cur_val, CriticalReception):
                 # CR is a structured nested field: deep-merge rather than wholesale
                 # replace, so a partial probe (e.g. amg_dr only, sources unset) can't
-                # silently drop the existing sources list. Per-field rule: prefer the
-                # incoming value when populated, fall back to the stored one.
+                # silently drop the existing data. amg_dr prefers the incoming value when
+                # populated and falls back to the stored one; sources are unioned per
+                # source name (incoming entry wins for a source present on both sides,
+                # stored-only sources are kept) so a probe that surfaces a new source
+                # without re-emitting the others is additive instead of destructive.
                 # (If nothing is stored yet, the generic fallback below applies.)
                 setattr(
                     self,
                     fld.name,
                     CriticalReception(
                         amg_dr=new_val.amg_dr if new_val.amg_dr is not None else cur_val.amg_dr,
-                        sources=new_val.sources or cur_val.sources,
+                        sources=_merge_review_sources(cur_val.sources, new_val.sources),
                     ),
                 )
             elif cur_val is None:

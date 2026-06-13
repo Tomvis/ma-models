@@ -181,6 +181,9 @@ class ResourceBusyError(MusicAssistantError):
     """
 
     error_code = 24
+    # 409 Conflict: the request conflicts with the current state of an
+    # exclusive resource (already in use), matching the AlreadyIn* siblings.
+    http_status = 409
 
 
 class RateLimited(ResourceTemporarilyUnavailable):
@@ -192,6 +195,9 @@ class RateLimited(ResourceTemporarilyUnavailable):
     """
 
     error_code = 25
+    # 429 Too Many Requests rather than the parent's 503 — clients/proxies key on
+    # 429 for rate-limit-aware backoff.
+    http_status = 429
 
 
 class AlreadyInLibraryError(MusicAssistantError):
