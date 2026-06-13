@@ -268,22 +268,20 @@ class MediaItemMetadata(DataClassDictMixin):
                 # some fields are always allowed to be overwritten
                 # (such as popularity and last_refresh)
                 setattr(self, fld.name, new_val)
-            elif fld.name == "critical_reception" and isinstance(new_val, CriticalReception):
+            elif fld.name == "critical_reception" and isinstance(cur_val, CriticalReception):
                 # CR is a structured nested field: deep-merge rather than wholesale
                 # replace, so a partial probe (e.g. amg_dr only, sources unset) can't
                 # silently drop the existing sources list. Per-field rule: prefer the
                 # incoming value when populated, fall back to the stored one.
-                if isinstance(cur_val, CriticalReception):
-                    setattr(
-                        self,
-                        fld.name,
-                        CriticalReception(
-                            amg_dr=new_val.amg_dr if new_val.amg_dr is not None else cur_val.amg_dr,
-                            sources=new_val.sources or cur_val.sources,
-                        ),
-                    )
-                else:
-                    setattr(self, fld.name, new_val)
+                # (If nothing is stored yet, the generic fallback below applies.)
+                setattr(
+                    self,
+                    fld.name,
+                    CriticalReception(
+                        amg_dr=new_val.amg_dr if new_val.amg_dr is not None else cur_val.amg_dr,
+                        sources=new_val.sources or cur_val.sources,
+                    ),
+                )
             elif cur_val is None:
                 setattr(self, fld.name, new_val)
         return self

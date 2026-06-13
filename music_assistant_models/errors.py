@@ -5,6 +5,8 @@ class MusicAssistantError(Exception):
     """Custom Exception for all errors."""
 
     error_code = 0
+    # HTTP status the error maps to when surfaced over the REST/JSON-RPC API
+    http_status = 400
 
     def __init_subclass__(cls, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         """Register a subclass."""
@@ -20,12 +22,14 @@ class ProviderUnavailableError(MusicAssistantError):
     """Error raised when trying to access mediaitem of unavailable provider."""
 
     error_code = 1
+    http_status = 404
 
 
 class MediaNotFoundError(MusicAssistantError):
     """Error raised when trying to access non existing media item."""
 
     error_code = 2
+    http_status = 404
 
 
 class InvalidDataError(MusicAssistantError):
@@ -74,6 +78,7 @@ class PlayerUnavailableError(MusicAssistantError):
     """Error raised when trying to access non-existing or unavailable player."""
 
     error_code = 10
+    http_status = 404
 
 
 class PlayerCommandFailed(MusicAssistantError):
@@ -121,12 +126,14 @@ class ResourceTemporarilyUnavailable(MusicAssistantError):
         self.backoff_time = backoff_time
 
     error_code = 17
+    http_status = 503
 
 
 class ProviderPermissionDenied(MusicAssistantError):
     """Error thrown when a provider action is denied because of permissions."""
 
     error_code = 18
+    http_status = 403
 
 
 class ActionUnavailable(MusicAssistantError):
@@ -139,24 +146,28 @@ class AuthenticationRequired(MusicAssistantError):
     """Error raised when authentication is required but not provided."""
 
     error_code = 20
+    http_status = 401
 
 
 class AuthenticationFailed(MusicAssistantError):
     """Error raised when authentication credentials are invalid."""
 
     error_code = 21
+    http_status = 401
 
 
 class InsufficientPermissions(MusicAssistantError):
     """Error raised when user lacks required permissions for an action."""
 
     error_code = 22
+    http_status = 403
 
 
 class InvalidToken(MusicAssistantError):
     """Error raised when an access token is invalid or expired."""
 
     error_code = 23
+    http_status = 401
 
 
 class ResourceBusyError(MusicAssistantError):
@@ -187,9 +198,13 @@ class AlreadyInLibraryError(MusicAssistantError):
     """Error raised when adding a media item that is already in the library proper."""
 
     error_code = 26
+    # same 409 as AlreadyInListenLaterError; the `code` field in the body differentiates them
+    http_status = 409
 
 
 class AlreadyInListenLaterError(MusicAssistantError):
     """Error raised when adding a media item that is already marked as listen-later."""
 
     error_code = 27
+    # same 409 as AlreadyInLibraryError; the `code` field in the body differentiates them
+    http_status = 409
