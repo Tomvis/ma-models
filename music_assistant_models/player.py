@@ -7,11 +7,12 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from mashumaro import DataClassDictMixin
+from mashumaro import DataClassDictMixin, field_options
 
 from .constants import EXTRA_ATTRIBUTES_TYPES, PLAYER_CONTROL_NONE
 from .enums import IdentifierType, MediaType, PlaybackState, PlayerFeature, PlayerType
 from .media_items import MediaItemPalette
+from .translations import resolve_translation, translations_active
 from .unique_list import UniqueList
 
 
@@ -23,6 +24,7 @@ class OutputProtocol(DataClassDictMixin):
     This provides a unified view of all ways to play audio to a device:
     - Native output (if player supports PLAY_MEDIA)
     - Protocol outputs (AirPlay, Chromecast, DLNA, etc.)
+    - Derived transports riding on another output (e.g. Sendspin over AirPlay)
     """
 
     output_protocol_id: str  # Unique ID: "native" or protocol player_id
@@ -32,6 +34,7 @@ class OutputProtocol(DataClassDictMixin):
     is_native: bool = False  # True if this is the player's native output
     priority: int = 100  # Lower = more preferred (native = 0 if supported)
     available: bool = True  # Whether this output protocol is currently available
+    derived_from: str | None = None  # output_protocol_id of the base output, if derived
 
 
 @dataclass
@@ -108,6 +111,7 @@ class PlayerMedia(DataClassDictMixin):
     title: str | None = None  # optional
     artist: str | None = None  # optional
     album: str | None = None  # optional
+    album_artist: str | None = None  # optional
     image_url: str | None = None  # optional
     palette: MediaItemPalette | None = None  # optional
     duration: int | None = None  # optional
@@ -159,6 +163,11 @@ class PlayerSoundMode(DataClassDictMixin):
     # optional translation key
     # defaults to id
     translation_key: str = ""
+    # translation_owner: namespace ("provider.<domain>"/"core.<domain>") the sound mode's
+    # strings resolve under; stamped by the player provider/controller. Not serialized.
+    translation_owner: str | None = field(
+        default=None, metadata=field_options(serialize="omit"), repr=False
+    )
 
     def __hash__(self) -> int:
         """Return custom hash."""
@@ -168,6 +177,17 @@ class PlayerSoundMode(DataClassDictMixin):
         """Run some basic sanity checks after init."""
         if not self.translation_key:
             self.translation_key = self.id
+
+    def __post_serialize__(self, d: dict[str, Any]) -> dict[str, Any]:
+        """Localize the sound mode name from its translation_key when a resolver is active."""
+        localized = resolve_translation(
+            f"sound_mode.{self.translation_key}.name", owner=self.translation_owner
+        )
+        if localized is not None:
+            d["name"] = localized
+        # translation_key is kept on the wire: the Home Assistant integration relies on it
+        # as a stable identifier, so (unlike other models) it is not stripped here.
+        return d
 
 
 class PlayerOptionType(StrEnum):
@@ -229,6 +249,11 @@ class PlayerOption(DataClassDictMixin):
     translation_key: str = ""
     # translation_params: optional parameters for the translation key
     translation_params: list[str] | None = None
+    # translation_owner: namespace ("provider.<domain>"/"core.<domain>") the option's
+    # strings resolve under; stamped by the player provider/controller. Not serialized.
+    translation_owner: str | None = field(
+        default=None, metadata=field_options(serialize="omit"), repr=False
+    )
 
     # current value of the option, see PlayerOptionValueType for serialization order.
     value: PlayerOptionValueType
@@ -256,6 +281,26 @@ class PlayerOption(DataClassDictMixin):
                 f"Value {self.value} must be of type {PlayerOptionTypeMap[self.type]} "
                 "if type is {self.type}"
             )
+
+    def __post_serialize__(self, d: dict[str, Any]) -> dict[str, Any]:
+        """Localize the option name and option titles when a resolver is active."""
+        base = f"player_options.{self.translation_key}"
+        localized = resolve_translation(
+            f"{base}.name", owner=self.translation_owner, params=self.translation_params
+        )
+        if localized is not None:
+            d["name"] = localized
+        for option_dict, option in zip(d.get("options") or [], self.options or [], strict=False):
+            option_name = resolve_translation(
+                f"{base}.options.{option.translation_key}", owner=self.translation_owner
+            )
+            if option_name is not None:
+                option_dict["name"] = option_name
+        # translation_key is kept on the wire (the Home Assistant integration relies on it as a
+        # stable identifier); only the resolution input is stripped from localized API output.
+        if translations_active():
+            d.pop("translation_params", None)
+        return d
 
 
 @dataclass
@@ -374,6 +419,18 @@ class Player(DataClassDictMixin):
 
     # needs_setup: if True, the player needs to be set up before it can be used
     needs_setup: bool = False
+    # setup_reason: short (translatable) slug describing why the player needs setup
+    # (e.g. "pairing_required", "password_required"); None when no setup is needed
+    setup_reason: str | None = None
+
+    # has_setup_flow: if True, this player (or a protocol child it wraps) offers an
+    # interactive setup flow that can also be re-run on demand (reconfigure/re-pair),
+    # regardless of whether setup is currently needed
+    has_setup_flow: bool = False
+
+    # sleep_timer_expires_at: unix (utc) timestamp at which the active sleep timer will
+    # stop playback, or None if no sleep timer is currently set for this player
+    sleep_timer_expires_at: float | None = None
 
     #############################################################################
     # helper methods and properties                                             #

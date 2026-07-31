@@ -9,7 +9,7 @@ from typing import Any
 
 from mashumaro import DataClassDictMixin, field_options, pass_through
 
-from .dsp import DSPDetails
+from .audio_processing import AudioProcessingChain
 from .enums import MediaType, StreamType, VolumeNormalizationMode
 from .media_items import AudioFormat
 
@@ -92,6 +92,9 @@ class StreamDetails(DataClassDictMixin):
     # stream metadata: radio/live streams can optionally set/use this field
     # to set the metadata of the playing media during the stream
     stream_metadata: StreamMetadata | None = None
+
+    # Complete audio processing chain; None until resolved by the server.
+    audio_processing: AudioProcessingChain | None = None
 
     #############################################################################
     # the fields below will only be used server-side and not sent to the client #
@@ -200,10 +203,6 @@ class StreamDetails(DataClassDictMixin):
     volume_normalization_mode: VolumeNormalizationMode | None = None
     volume_normalization_gain_correct: float | None = None
     target_loudness: float | None = None
-
-    # This contains the DSPDetails of all players in the group.
-    # In case of single player playback, dict will contain only one entry.
-    dsp: dict[str, DSPDetails] | None = None
 
     # the fields below are managed by the queue/stream controller and may not be set by providers
     fade_in: bool = field(

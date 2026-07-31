@@ -16,19 +16,19 @@ license = {text = "Apache-2.0"}
 readme = "README.md"
 requires-python = ">=3.11"
 # The version is set by GH action on release
-version = "1.1.129.post1"
+version = "1.1.173"
 
 [project.optional-dependencies]
 test = [
-  "codespell==2.4.2",
+  "codespell==2.4.3",
   "isort==8.0.1",
-  "mypy==2.1.0",
+  "mypy==2.3.0",
   "pre-commit==4.6.0",
   "pre-commit-hooks==6.0.0",
-  "pytest==9.0.3",
-  "pytest-cov==7.0.0",
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
   "tomli==2.4.1",
-  "ruff==0.14.14",
+  "ruff==0.15.22",
 ]
 
 [tool.codespell]
@@ -107,8 +107,8 @@ ignore = [
   "PLR2004", # Just annoying, not really useful
   "PD011", # Just annoying, not really useful
   "S101", # assert is often used to satisfy type checking
-  "TCH001", # Just annoying, not really useful
-  "TCH003", # Just annoying, not really useful
+  "TC001", # Just annoying, not really useful
+  "TC003", # Just annoying, not really useful
   "TD002", # Just annoying, not really useful
   "TD003", # Just annoying, not really useful
   "TD004", # Just annoying, not really useful

@@ -36,6 +36,7 @@ class MediaType(StrEnum, metaclass=MediaTypeMeta):
     PODCAST = "podcast"
     PODCAST_EPISODE = "podcast_episode"
     FOLDER = "folder"
+    COLLECTION = "collection"
     ANNOUNCEMENT = "announcement"
     FLOW_STREAM = "flow_stream"
     # deprecated: replaced by AUDIO_SOURCE, kept for one release for backwards compatibility
@@ -47,6 +48,20 @@ class MediaType(StrEnum, metaclass=MediaTypeMeta):
 
     @classmethod
     def _missing_(cls, value: object) -> MediaType:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.UNKNOWN
+
+
+class DashboardType(StrEnum):
+    """Enum with the dashboards that can be cast to a display device."""
+
+    PARTY = "party"
+    NOW_PLAYING = "now_playing"
+    MUSIC_QUIZ = "music_quiz"
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> DashboardType:  # noqa: ARG003
         """Set default enum member if an unknown value is provided."""
         return cls.UNKNOWN
 
@@ -169,6 +184,18 @@ class AlbumType(StrEnum):
         return cls.UNKNOWN
 
 
+class RecommendationFolderType(StrEnum):
+    """Enum for RecommendationFolder type."""
+
+    DEFAULT = "default"
+    TIMELINE = "timeline"
+
+    @classmethod
+    def _missing_(cls, value: object) -> RecommendationFolderType:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.DEFAULT
+
+
 class ArtistType(StrEnum):
     """Enum for Artist type."""
 
@@ -177,8 +204,20 @@ class ArtistType(StrEnum):
     NARRATOR = "narrator"  # narrator of an audiobook
     UNKNOWN = "unknown"
 
+
+class ArtistEntityType(StrEnum):
+    """Enum for Artist entity type (mirrors MusicBrainz artist type)."""
+
+    PERSON = "person"  # individual person
+    GROUP = "group"  # music group
+    ORCHESTRA = "orchestra"  # orchestra
+    CHOIR = "choir"  # choir
+    CHARACTER = "character"  # fictional character
+    OTHER = "other"  # other
+    UNKNOWN = "unknown"
+
     @classmethod
-    def _missing_(cls, value: object) -> ArtistType:  # noqa: ARG003
+    def _missing_(cls, value: object) -> ArtistEntityType:  # noqa: ARG003
         """Set default enum member if an unknown value is provided."""
         return cls.UNKNOWN
 
@@ -366,6 +405,24 @@ class RepeatMode(StrEnum):
         return cls.UNKNOWN
 
 
+class CrossfadeMode(StrEnum):
+    """Enum with crossfade modes for a queue."""
+
+    SMART_CROSSFADE = "smart_crossfade"  # Use smart crossfade with beat matching and EQ filters
+    STANDARD_CROSSFADE = "standard_crossfade"  # Use standard crossfade only
+    DISABLED = "disabled"  # No crossfade
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> CrossfadeMode:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.UNKNOWN
+
+
+# alias for backwards compatibility
+SmartFadesMode = CrossfadeMode
+
+
 class PlaybackState(StrEnum):
     """Enum for the (playback)state of a player."""
 
@@ -530,6 +587,7 @@ class EventType(StrEnum):
     PLAYER_CONFIG_UPDATED = "player_config_updated"
     PLAYER_DSP_CONFIG_UPDATED = "player_dsp_config_updated"
     PLAYER_OPTIONS_UPDATED = "player_options_updated"
+    PLAYER_SLEEP_TIMER_UPDATED = "player_sleep_timer_updated"
     DSP_PRESETS_UPDATED = "dsp_presets_updated"
     QUEUE_ADDED = "queue_added"
     QUEUE_UPDATED = "queue_updated"
@@ -540,8 +598,19 @@ class EventType(StrEnum):
     MEDIA_ITEM_UPDATED = "media_item_updated"
     MEDIA_ITEM_DELETED = "media_item_deleted"
     PROVIDERS_UPDATED = "providers_updated"
+    # generic event emitted by a provider instance;
+    # object_id = provider instance_id (optionally suffixed with /sub_scope),
+    # data = provider-defined payload
+    PROVIDER_EVENT = "provider_event"
+    # setup_flow_updated: a running setup flow produced a new/updated step;
+    # object_id is the flow_id
+    SETUP_FLOW_UPDATED = "setup_flow_updated"
     SYNC_TASKS_UPDATED = "sync_tasks_updated"
     TASKS_UPDATED = "tasks_updated"
+    DASHBOARD_SHOW = "dashboard_show"
+    DASHBOARD_HIDE = "dashboard_hide"
+    DASHBOARDS_UPDATED = "dashboards_updated"
+    DASHBOARD_SESSIONS_UPDATED = "dashboard_sessions_updated"
     MUSIC_SYNC_COMPLETED = "music_sync_completed"
     AUTH_SESSION = "auth_session"
     CORE_STATE_UPDATED = "core_state_updated"
@@ -642,13 +711,15 @@ class ProviderFeature(StrEnum):
     ARTIST_METADATA = "artist_metadata"
     ALBUM_METADATA = "album_metadata"
     TRACK_METADATA = "track_metadata"
+    PLAYLIST_METADATA = "playlist_metadata"
     LYRICS = "lyrics"  # lyrics support - can also be provided by a music provider
 
     #
     # PLUGIN FEATURES
     #
     AUDIO_SOURCE = "audio_source"
-    AUDIO_OVERLAY = "audio_overlay"  # plugin can mix an audio overlay into queue playback
+    # provider can enumerate sound effect items (live, not library-backed)
+    SOUND_EFFECTS = "sound_effects"
 
     #
     # OTHER FEATURES (plugin-only)
@@ -698,10 +769,42 @@ class ConfigEntryType(StrEnum):
     ACTION = "action"
     ICON = "icon"
     ALERT = "alert"
+    IMAGE = "image"
+    # url: a clickable link; when returned from a config invoke_action response,
+    # the frontend opens the value (one-shot) instead of rendering a field
+    URL = "url"
     UNKNOWN = "unknown"
 
     @classmethod
     def _missing_(cls, value: object) -> ConfigEntryType:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.UNKNOWN
+
+
+class FlowStepType(StrEnum):
+    """Enum with the possible types of a setup flow step."""
+
+    # form: render config entries and wait for the user to submit
+    FORM = "form"
+
+    # external: the user must open an external url (e.g. OAuth);
+    # the server advances the flow on the callback
+    EXTERNAL = "external"
+
+    # progress: the server is working/waiting on something; no user input
+    PROGRESS = "progress"
+
+    # finish: the flow completed; result references the created/updated object
+    FINISH = "finish"
+
+    # abort: the flow ended without a result
+    ABORT = "abort"
+
+    # fallback
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> FlowStepType:  # noqa: ARG003
         """Set default enum member if an unknown value is provided."""
         return cls.UNKNOWN
 
@@ -824,6 +927,14 @@ class ProviderStage(StrEnum):
         return cls.STABLE
 
 
+class ProviderIconVariant(StrEnum):
+    """Enum of provider icon variants that a provider can supply."""
+
+    DEFAULT = "default"
+    DARK = "dark"
+    MONOCHROME = "monochrome"
+
+
 class CoreState(StrEnum):
     """Enum representing the core state of the Music Assistant server."""
 
@@ -831,3 +942,25 @@ class CoreState(StrEnum):
     RUNNING = "running"
     STOPPING = "stopping"
     STOPPED = "stopped"
+
+
+class ProviderStatus(StrEnum):
+    """
+    Enum representing the load/lifecycle status of a provider (instance).
+
+    Derived server-side from the provider's config and (when present) its loaded instance.
+    Runtime reachability of a loaded provider is conveyed separately by ProviderInstance.available.
+    """
+
+    # loaded: setup succeeded; a live instance exists
+    LOADED = "loaded"
+    # loading: enabled and being (re)loaded, or waiting on a dependency; no instance yet, no error
+    LOADING = "loading"
+    # disabled: provider config exists but is disabled by the user
+    DISABLED = "disabled"
+    # auth_required: setup failed because (re)authentication is needed
+    AUTH_REQUIRED = "auth_required"
+    # incompatible: the host does not meet the provider's requirements (permanent)
+    INCOMPATIBLE = "incompatible"
+    # error: setup failed for any other reason (see the provider's last_error)
+    ERROR = "error"

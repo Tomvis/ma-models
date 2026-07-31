@@ -10,7 +10,7 @@ from typing import Any
 
 from mashumaro import DataClassDictMixin
 
-from music_assistant_models.enums import ImageType, LinkType
+from music_assistant_models.enums import ArtistEntityType, ImageType, LinkType
 from music_assistant_models.helpers import merge_lists
 from music_assistant_models.unique_list import UniqueList
 
@@ -113,6 +113,45 @@ class MediaItemChapter(DataClassDictMixin):
     def __hash__(self) -> int:
         """Return custom hash."""
         return hash(self.position)
+
+
+@dataclass(frozen=True, kw_only=True)
+class MediaItemCollection(DataClassDictMixin):
+    """
+    Model for a MediaItem's collection.
+
+    A book can be part of one or multiple collections. The backend will collect all books belonging
+    to a series, the provider only needs use this model and add it as often as needed to the
+    audiobooks collections field. One may optionally specify a certain sequence (e.g. for a book
+    series), and the backend will then sort accordingly. Otherwise the collection entries will just
+    be returned alphabetically.
+    """
+
+    title: str
+    # sequence is used for sorting
+    # we will first sort by number, and then alphabetically
+    sequence: float | str | None = None
+
+    def __hash__(self) -> int:
+        """Return custom hash."""
+        return hash(self.title)
+
+
+@dataclass(kw_only=True)
+class AudioMetadata(DataClassDictMixin):
+    """Model for audio-analysis-derived metadata of a track."""
+
+    bpm: float | None = None  # beats per minute
+    musical_key: str | None = None  # pitch class plus mode, e.g. "F# minor"
+
+
+@dataclass(frozen=True, kw_only=True)
+class LifeSpan(DataClassDictMixin):
+    """Life span dates for an artist (person or group)."""
+
+    begin: str | None = None  # ISO date (YYYY-MM-DD) or partial (YYYY-MM or YYYY)
+    end: str | None = None  # ISO date (YYYY-MM-DD) or partial (YYYY-MM or YYYY)
+    ended: bool = False  # whether the artist is deceased or the group has disbanded
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -224,6 +263,9 @@ class MediaItemMetadata(DataClassDictMixin):
     description: str | None = None
     # ISO 639-1 language code for `description`
     description_language: str | None = None
+    # Artist-specific metadata (applicable to Artist media type only)
+    life_span: LifeSpan | None = None  # birth/death for persons, founded/disbanded for groups
+    artist_entity_type: ArtistEntityType | None = None  # MusicBrainz artist entity type
     review: str | None = None
     explicit: bool | None = None
     # NOTE: images is a list of available images, sorted by preference
@@ -245,6 +287,9 @@ class MediaItemMetadata(DataClassDictMixin):
     # chapters is a list of available chapters, sorted by position
     # most commonly used for audiobooks and podcast episodes
     chapters: list[MediaItemChapter] | None = None
+    # Make the item part of one or multiple collections. Refer to the docstring for
+    # MediaItemCollection.
+    collections: UniqueList[MediaItemCollection] | None = None
     # critical_reception: per-source ratings/accolades (album scope, review-derived)
     critical_reception: CriticalReception | None = None
     # Dynamic Range (foobar2000 DR Meter convention). Measured from the audio file:
