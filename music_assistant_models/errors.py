@@ -257,6 +257,9 @@ class RateLimited(ResourceTemporarilyUnavailable):
 
     error_code = 25
     translation_key = "rate_limited"
+    # 429 Too Many Requests rather than the parent's 503 — clients/proxies key on
+    # 429 for rate-limit-aware backoff.
+    http_status = 429
 
 
 class UnsupportedSystemError(SetupFailedError):
@@ -270,9 +273,9 @@ class UnsupportedSystemError(SetupFailedError):
 
     error_code = 26
     translation_key = "unsupported_system"
-    # 429 Too Many Requests rather than the parent's 503 — clients/proxies key on
-    # 429 for rate-limit-aware backoff.
-    http_status = 429
+    # 400 (inherited): a permanent host-capability mismatch. Deliberately NOT a
+    # retry-flavoured status — the docstring above states the load must not be
+    # retried, so 429/503 would tell clients and proxies exactly the wrong thing.
 
 
 class AlreadyInLibraryError(MusicAssistantError):

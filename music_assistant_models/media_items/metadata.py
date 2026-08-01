@@ -246,10 +246,14 @@ def _merge_review_sources(
     empty/None falls back to the other, so a probe that only carries one source
     (e.g. TPS) no longer drops the others (e.g. a stored AMG entry).
     """
+    # Always hand back a fresh list: the merged CriticalReception is stored on a
+    # different MediaItemMetadata than the inputs, and returning an input list by
+    # reference would alias the two (entries are mutated in place downstream, e.g.
+    # by the server's normalize_review_entries).
     if not new:
-        return cur
+        return list(cur) if cur else cur
     if not cur:
-        return new
+        return list(new)
     merged: dict[str, ReviewSourceEntry] = {s.source: s for s in cur}
     for entry in new:
         merged[entry.source] = entry
