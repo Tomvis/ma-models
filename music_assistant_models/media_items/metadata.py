@@ -332,16 +332,21 @@ class MediaItemMetadata(DataClassDictMixin):
                 setattr(self, fld.name, new_val)
             elif isinstance(cur_val, set) and isinstance(new_val, set | list | tuple):
                 cur_val.update(new_val)
-            elif new_val and fld.name in (
-                "popularity",
-                "last_refresh",
+            elif fld.name == "dynamic_range":
                 # dynamic_range is a measured scalar: a re-probe/refresh should land,
                 # so always overwrite with the incoming value rather than only filling
                 # a None gap (otherwise a corrected DR could never replace a stale one).
-                "dynamic_range",
+                # Deliberately gated on "not None" (already guaranteed above) instead of
+                # truthiness, unlike the fields below: DR 0.0 is a legitimate reading for
+                # fully-clipped audio, whereas a 0 popularity / 0 last_refresh is a
+                # not-measured sentinel that must not clobber a stored value.
+                setattr(self, fld.name, new_val)
+            elif new_val and fld.name in (
+                "popularity",
+                "last_refresh",
             ):
                 # some fields are always allowed to be overwritten
-                # (such as popularity, last_refresh and dynamic_range)
+                # (such as popularity and last_refresh)
                 setattr(self, fld.name, new_val)
             elif fld.name == "critical_reception" and isinstance(cur_val, CriticalReception):
                 # CR is a structured nested field: deep-merge rather than wholesale

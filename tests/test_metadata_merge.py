@@ -82,3 +82,27 @@ def test_update_dynamic_range_keeps_stored_when_incoming_none() -> None:
     incoming = MediaItemMetadata(popularity=10)
     stored.update(incoming)
     assert stored.dynamic_range == 11.5
+
+
+def test_update_dynamic_range_zero_overwrites_stored_value() -> None:
+    """A measured DR of exactly 0.0 is a real reading and must replace a stale one."""
+    stored = MediaItemMetadata(dynamic_range=11.5)
+    incoming = MediaItemMetadata(dynamic_range=0.0)
+    stored.update(incoming)
+    assert stored.dynamic_range == 0.0
+
+
+def test_update_popularity_zero_does_not_overwrite_stored_value() -> None:
+    """Unlike dynamic_range, a falsy popularity stays a no-op against a stored value."""
+    stored = MediaItemMetadata(popularity=42)
+    incoming = MediaItemMetadata(popularity=0)
+    stored.update(incoming)
+    assert stored.popularity == 42
+
+
+def test_update_popularity_zero_fills_empty_gap() -> None:
+    """A zero popularity still lands when nothing is stored yet (gap-fill arm)."""
+    stored = MediaItemMetadata()
+    incoming = MediaItemMetadata(popularity=0)
+    stored.update(incoming)
+    assert stored.popularity == 0
