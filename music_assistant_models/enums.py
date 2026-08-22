@@ -74,6 +74,9 @@ class SourceControl(StrEnum):
     NEXT = "next"
     PREVIOUS = "previous"
     SEEK = "seek"
+    STOP = "stop"
+    SHUFFLE = "shuffle"
+    REPEAT = "repeat"
     UNKNOWN = "unknown"
 
     @classmethod
@@ -687,6 +690,11 @@ class ProviderFeature(StrEnum):
     # can show in the UI.
     SIMILAR_ARTISTS = "similar_artists"
 
+    # lookup by external ID (ISRC, MusicBrainz, etc.) per mediatype
+    TRACK_BY_EXTERNAL_ID = "track_by_external_id"
+    ALBUM_BY_EXTERNAL_ID = "album_by_external_id"
+    ARTIST_BY_EXTERNAL_ID = "artist_by_external_id"
+
     # playlist-specific features
     PLAYLIST_TRACKS_EDIT = "playlist_tracks_edit"
     # PLAYLIST_CREATE is deprecated: replaced by PLAYLIST_CREATE_TRACKS (and others)
@@ -965,3 +973,27 @@ class ProviderStatus(StrEnum):
     INCOMPATIBLE = "incompatible"
     # error: setup failed for any other reason (see the provider's last_error)
     ERROR = "error"
+
+
+class SortField(StrEnum):
+    """Sort fields available for media listings."""
+
+    NAME = "name"
+    SORT_NAME = "sort_name"
+    TIMESTAMP_ADDED = "timestamp_added"
+    TIMESTAMP_MODIFIED = "timestamp_modified"
+    LAST_PLAYED = "last_played"
+    PLAY_COUNT = "play_count"
+    DURATION = "duration"
+    YEAR = "year"
+    POSITION = "position"
+    ARTIST_NAME = "artist_name"
+    RANDOM = "random"
+    RANDOM_PLAY_COUNT = "random_play_count"
+
+
+class SortDirection(StrEnum):
+    """Sort direction."""
+
+    ASC = "asc"
+    DESC = "desc"

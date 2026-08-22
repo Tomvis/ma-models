@@ -10,7 +10,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
-dependencies = ["orjson>=3.9", "mashumaro>=3.14"]
+dependencies = ["orjson>=3.9", "mashumaro>=3.14", "anyascii==0.3.3"]
 description = "Music Assistant Base Models"
 license = {text = "Apache-2.0"}
 readme = "README.md"
@@ -23,7 +23,7 @@ test = [
   "codespell==2.4.3",
   "isort==8.0.1",
   "mypy==2.3.0",
-  "pre-commit==4.6.1",
+  "pre-commit==4.6.2",
   "pre-commit-hooks==6.0.0",
   "pytest==9.1.1",
   "pytest-cov==7.1.0",

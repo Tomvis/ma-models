@@ -278,10 +278,25 @@ class UnsupportedSystemError(SetupFailedError):
     # retried, so 429/503 would tell clients and proxies exactly the wrong thing.
 
 
+class UserNotFoundError(MusicAssistantError):
+    """Error raised when a referenced user does not exist."""
+
+    error_code = 27
+    translation_key = "user_not_found"
+
+
+# Fork-only errors live at 1000+ so upstream can keep extending its own sequence
+# without colliding. It already did once: this fork held 27/28, 1.1.194 gave 27 to
+# UserNotFoundError, and because __init_subclass__ writes ERROR_MAP[error_code]
+# unconditionally, a duplicate silently rebinds the code to whichever class is
+# defined last — a client decoding that code would raise the wrong exception.
+# 1000+ is also clear of the 999 fallback in ErrorResultMessage.
+
+
 class AlreadyInLibraryError(MusicAssistantError):
     """Error raised when adding a media item that is already in the library proper."""
 
-    error_code = 27
+    error_code = 1001
     # same 409 as AlreadyInListenLaterError; the `code` field in the body differentiates them
     http_status = 409
 
@@ -289,6 +304,6 @@ class AlreadyInLibraryError(MusicAssistantError):
 class AlreadyInListenLaterError(MusicAssistantError):
     """Error raised when adding a media item that is already marked as listen-later."""
 
-    error_code = 28
+    error_code = 1002
     # same 409 as AlreadyInLibraryError; the `code` field in the body differentiates them
     http_status = 409

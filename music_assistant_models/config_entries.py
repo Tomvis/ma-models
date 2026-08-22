@@ -130,12 +130,18 @@ class ConfigEntry(DataClassDictMixin):
     # help_link [optional]: link to help article.
     help_link: str | None = None
     # multi_value [optional]: allow multiple values from the list
-    # NOTE: for using multi_value, it is required to use the MultiValueConfigEntry
-    # class instead of ConfigEntry to prevent (de)serialization issues
+    # NOTE: when set, the value is stored as a list, so default_value must be a list (or None)
     multi_value: bool = False
-    # depends_on [optional]: needs to be set before this setting is visible in the frontend
+    # expanded_options [optional]: render the options inline - all of them, with their
+    # descriptions, visible at once (e.g. as a radio group) - instead of behind a dropdown.
+    # Ignored when the entry has no options or is multi_value.
+    expanded_options: bool = False
+    # depends_on [optional]: key of another entry that gates this one; an unresolved key counts
+    # as unmet. While unmet, input types and ACTION stay visible but render disabled;
+    # DIVIDER/LABEL/ALERT/IMAGE have nothing to disable, so the frontend hides them instead.
     depends_on: str | None = None
-    # depends_on_value [optional]: complementary to depends_on, only show if this value is set
+    # depends_on_value [optional]: complementary to depends_on, the dependency is only met when
+    # the other entry holds this exact value (without it, any value the frontend reads as truthy)
     depends_on_value: ConfigValueType | None = None
     # depends_on_value_not [optional]: same as depends_on_value but inverted
     depends_on_value_not: ConfigValueType | None = None
@@ -166,7 +172,8 @@ class ConfigEntry(DataClassDictMixin):
         default=None, metadata=field_options(serialize="omit"), repr=False
     )
 
-    # validate: an optional custom validation callback (author-provided)
+    # validate: an optional custom validation callback (author-provided), only ever called
+    # with a value the entry actually holds - never to check whether it holds one at all
     validate: Callable[[ConfigValueType], bool] | None = field(
         default=None,
         compare=False,
@@ -259,13 +266,42 @@ class ConfigEntry(DataClassDictMixin):
             d["category_label"] = category_label
         return d
 
+    def dependency_met(self, entries: Iterable[ConfigEntry]) -> bool:
+        """
+        Return whether this entry's `depends_on` dependency is satisfied within `entries`.
+
+        An entry without a dependency is always satisfied, while one naming a key that is
+        not among `entries` never is. `depends_on_value` requires the dependency to hold
+        that exact value and `depends_on_value_not` requires it not to; with neither, any
+        truthy value satisfies it.
+        """
+        if self.depends_on is None:
+            return True
+        dependency = next((e for e in entries if e.key == self.depends_on), None)
+        if dependency is None:
+            return False
+        if self.depends_on_value is not None:
+            return dependency.value == self.depends_on_value
+        if self.depends_on_value_not is not None:
+            return dependency.value != self.depends_on_value_not
+        return bool(dependency.value)
+
     def parse_value(
         self,
         value: ConfigValueType,
         allow_none: bool = True,
         raise_on_error: bool = True,
     ) -> ConfigValueType:
-        """Parse value from the config entry details and plain value."""
+        """
+        Coerce a plain value into this entry's value and store it, falling back to the default.
+
+        :param value: The plain value to parse, as submitted or as read from storage.
+        :param allow_none: Whether an entry that ends up without any value is acceptable, used
+            for a required entry the user has no way to fill in (e.g. one rendered disabled
+            behind an unmet `depends_on`).
+        :param raise_on_error: Whether to reject an unusable value instead of silently falling
+            back to the default.
+        """
         if self.type == ConfigEntryType.LABEL:
             value = self.label
         elif self.type in UI_ONLY:
@@ -273,6 +309,14 @@ class ConfigEntry(DataClassDictMixin):
 
         if value is None:
             value = self.default_value
+
+        if value is None:
+            # nothing to work with: the shape checks and the validate callback below all
+            # describe a value that was actually given, so only the required check applies
+            if self.required and not allow_none and raise_on_error:
+                raise ValueError(f"{self.key} is required")
+            self.value = None
+            return self.value
 
         if isinstance(value, list) and not self.multi_value:
             if raise_on_error:
@@ -293,13 +337,9 @@ class ConfigEntry(DataClassDictMixin):
                 return bool(_value)
             return _value
 
-        if value is None and self.required and not allow_none:
-            if raise_on_error:
-                raise ValueError(f"{self.key} is required")
-            value = self.default_value
-
         # handle optional validation callback
-        if self.validate is not None and not (self.validate(value)):
+        # (value can be None again here when a shape check fell back to an empty default)
+        if value is not None and self.validate is not None and not (self.validate(value)):
             if raise_on_error:
                 raise ValueError(f"{value} is not a valid value for {self.key}")
             value = self.default_value
@@ -325,6 +365,50 @@ class ConfigEntry(DataClassDictMixin):
             return [tuple(x.split(MULTI_VALUE_SPLITTER, 1)) for x in value]
         assert isinstance(value, str)
         return tuple(value.split(MULTI_VALUE_SPLITTER, 1))
+
+
+@dataclass(kw_only=True)
+class ConfigActionResult(DataClassDictMixin):
+    """
+    Outcome of a one-shot config action button press.
+
+    Returned by ``handle_config_action`` to report what the action did: a message to show the
+    user and/or a url for the client to open once. It never carries config entries - an action
+    is a one-off side effect, so the config form it was pressed from is left as it is. Raise
+    from the handler instead to report that the action failed.
+    """
+
+    # message: human-readable outcome to show the user, and the English fallback whenever
+    # translation_key is set - a client that receives neither a message nor a url reports a
+    # generic success, so an unresolvable key with no message says nothing at all
+    message: str | None = None
+    # open_url: http(s) url the client opens once when it handles this result; a client ignores
+    # any other scheme
+    open_url: str | None = None
+    # translation_key: optional bare slug to localize the message; __post_serialize__ derives the
+    # config_actions.<slug> group and resolves it owner-first then common (mirrors ProviderError)
+    translation_key: str | None = None
+    translation_args: list[Any] = field(default_factory=list)
+    # translation_owner: owning namespace ("provider.<domain>"/"core.<domain>") consulted before
+    # common; stamped by the server when it serves a result that does not already carry one
+    translation_owner: str | None = None
+
+    def __post_serialize__(self, d: dict[str, Any]) -> dict[str, Any]:
+        """Localize `message` from translation_key when a resolver is active; strip machinery."""
+        if self.translation_key:
+            params = [str(a) for a in self.translation_args] if self.translation_args else None
+            localized = resolve_translation(
+                f"config_actions.{self.translation_key}",
+                owner=self.translation_owner,
+                params=params,
+            )
+            if localized is not None:
+                d["message"] = localized
+        if translations_active():
+            d.pop("translation_key", None)
+            d.pop("translation_args", None)
+            d.pop("translation_owner", None)
+        return d
 
 
 @dataclass
@@ -437,8 +521,11 @@ class Config(DataClassDictMixin):
         """Validate if configuration is valid."""
         # For now we just use the parse method to check for not allowed None values
         # this can be extended later
-        for value in self.values.values():
-            value.parse_value(value.value, allow_none=False)
+        entries = list(self.values.values())
+        for entry in entries:
+            # an entry whose dependency is unmet renders disabled, so there is no way to
+            # give it a value - demanding one would make the config permanently unsavable
+            entry.parse_value(entry.value, allow_none=not entry.dependency_met(entries))
 
 
 @dataclass

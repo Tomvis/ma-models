@@ -32,6 +32,17 @@ from music_assistant_models.unique_list import UniqueList
 from .metadata import AudioMetadata, MediaItemImage, MediaItemMetadata
 from .provider_mapping import ProviderMapping
 
+# The media types a playlist is allowed to hold.
+PLAYLIST_SUPPORTED_MEDIATYPES = frozenset(
+    {
+        MediaType.AUDIOBOOK,
+        MediaType.PODCAST_EPISODE,
+        MediaType.RADIO,
+        MediaType.SOUND_EFFECT,
+        MediaType.TRACK,
+    }
+)
+
 
 @dataclass(kw_only=True)
 class _MediaItemBase(DataClassDictMixin):
@@ -392,22 +403,20 @@ class Playlist(_LocalizableTitle, MediaItem):
     # Examples: Apple Music Artist Stations, Deezer Flow.
     is_dynamic: bool = False
 
-    # The playlist may support only a single, or a mix of multiple media types. Allowed entries:
-    # MediaType.AUDIOBOOK, MediaType.PODCAST_EPISODE, MediaType.RADIO, MediaType.TRACK
+    # The playlist may support only a single, or a mix of multiple media types,
+    # limited to the entries in PLAYLIST_SUPPORTED_MEDIATYPES.
     supported_mediatypes: set[MediaType] = field(default_factory=lambda: {MediaType.TRACK})
 
     def __post_init__(self) -> None:
         """Run some basic sanity checks after init."""
         super().__post_init__()
-        _supported = {
-            MediaType.AUDIOBOOK,
-            MediaType.PODCAST_EPISODE,
-            MediaType.RADIO,
-            MediaType.SOUND_EFFECT,
-            MediaType.TRACK,
-        }
-        if len(self.supported_mediatypes.difference(_supported)) > 0:
-            raise TypeError(f"Playlists are only supported for {_supported}.")
+        # Media types that cannot be in a playlist are dropped instead of rejected. That
+        # covers types added after this version, which deserialize to UNKNOWN here: a
+        # newer server must never make the playlist fail to parse, as that takes the
+        # entire listing down with it.
+        self.supported_mediatypes &= PLAYLIST_SUPPORTED_MEDIATYPES
+        if not self.supported_mediatypes:
+            self.supported_mediatypes = {MediaType.TRACK}
 
 
 @dataclass(kw_only=True)
@@ -419,6 +428,8 @@ class Radio(_LocalizableTitle, MediaItem):
 
     media_type: MediaType = MediaType.RADIO
     duration: int | None = None
+    # When True, tracks come from get_dynamic_radio_tracks instead of a live stream.
+    is_dynamic: bool = False
 
     def __post_serialize__(self, d: dict[str, Any]) -> dict[str, Any]:
         """Adjust dict object after it has been serialized."""
@@ -534,6 +545,33 @@ class SoundEffect(_LocalizableName, MediaItem):
 
 
 @dataclass(kw_only=True)
+class SourceQueueCapabilities(DataClassDictMixin):
+    """
+    Queue commands a live AudioSource can handle natively (session-side).
+
+    Declared by the owning plugin on its AudioSource; the queue controller
+    delegates queue commands to the plugin and mirrors the session's state
+    back into the normal PlayerQueue view.
+    """
+
+    # provider domain whose items this source can play natively (e.g. "spotify")
+    provider_domain: str | None = None
+    # media types accepted by a play/replace redirect into the session
+    playable_media_types: list[MediaType] = field(default_factory=list)
+    # media types accepted by enqueue-to-session (e.g. Spotify: tracks only)
+    enqueueable_media_types: list[MediaType] = field(default_factory=list)
+    can_shuffle: bool = False
+    can_repeat: bool = False
+    # source pushes a queue view (previous/upcoming) that MA can mirror
+    provides_queue_view: bool = False
+    # declarative: the session provides these natively, so MA's own
+    # equivalents are inert while the source owns the queue
+    native_autoplay: bool = False
+    native_crossfade: bool = False
+    native_volume_normalization: bool = False
+
+
+@dataclass(kw_only=True)
 class AudioSource(MediaItem):
     """
     Model for a live audio source provided by a plugin.
@@ -578,6 +616,14 @@ class AudioSource(MediaItem):
     # plugin's get_stream_details must raise (AudioError) when it cannot
     # actually acquire the upstream producer.
     can_initiate: bool = False
+
+    # queue commands the source's session handles natively;
+    # None = transport-only source (no queue delegation)
+    queue_capabilities: SourceQueueCapabilities | None = None
+
+    # the service account the session is paired to, once known/verified
+    # (e.g. the Spotify user id); used to gate playback redirects
+    account_id: str | None = None
 
 
 @dataclass(kw_only=True)
@@ -655,6 +701,8 @@ class RecommendationFolder(BrowseFolder):
     # rows off by default are noisier (e.g. random or raw play-history); the client
     # hides them until the user opts in. Only meaningful on the descriptor (rows) response.
     enabled_by_default: bool = True
+    # whether this row's items endpoint accepts a source-provider filter
+    supports_provider_filter: bool = False
 
     @property
     def _translation_group(self) -> str:

@@ -12,6 +12,8 @@ from typing import Any
 from unicodedata import combining, normalize
 from uuid import UUID
 
+from anyascii import anyascii
+
 from music_assistant_models.enums import MediaType
 
 DO_NOT_SERIALIZE_TYPES = (MethodType, Task)
@@ -84,6 +86,26 @@ def create_sort_name(input_str: str) -> str:
             input_str = input_str.replace(item, "", 1) + f", {item}"
             break
     return input_str.strip()
+
+
+def create_safe_string(input_str: str, lowercase: bool = True, replace_space: bool = False) -> str:
+    """Return clean lowered string for compare actions."""
+    # handle some special cases
+    if input_str in ("P!nk", "p!nk"):
+        input_str = input_str.replace("!", "i")
+    if input_str in ("Wh♂", "wh♂"):
+        input_str = input_str.replace("♂", "o")
+    if input_str in ("KoЯn", "koЯn"):
+        input_str = input_str.replace("Я", "r")
+    if input_str == "$hort":
+        input_str = input_str.replace("$hort", "short")
+    input_str = input_str.lower().strip() if lowercase else input_str.strip()
+    unaccented_string = anyascii(input_str)
+    if lowercase:
+        # anyascii can emit uppercase for symbols and non-latin scripts (™ -> TM)
+        unaccented_string = unaccented_string.lower()
+    regex = r"[^a-zA-Z0-9]" if replace_space else r"[^a-zA-Z0-9 ]"
+    return re.sub(regex, "", unaccented_string)
 
 
 def is_valid_uuid(uuid_to_test: str) -> bool:

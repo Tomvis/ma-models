@@ -122,6 +122,11 @@ class PlayerMedia(DataClassDictMixin):
     source_id: str | None = None  # optional (ID of the source, may be a queue id)
     queue_item_id: str | None = None  # only present for requests from queue controller
     custom_data: dict[str, Any] | None = None  # optional - must be serializable
+    # queue_session_id: playback session that owns this media, used to build and validate
+    # the stream URL. Server-internal, so it must never reach a client. Not serialized.
+    queue_session_id: str | None = field(
+        default=None, metadata=field_options(serialize="omit"), repr=False
+    )
 
     # optional - elapsed playback time of the currently playing media
     elapsed_time: int | None = None
@@ -381,12 +386,19 @@ class Player(DataClassDictMixin):
     # hide_in_ui: if the player should be hidden in the UI
     hide_in_ui: bool = False
 
+    # private: if the player must not be offered to other clients as a playback
+    # or grouping target, because it belongs to a single device (a web/app client)
+    # or is an internal anchor. Not user configurable, unlike hide_in_ui.
+    private: bool = False
+
     # expose_to_ha: if the player should be exposed to Home Assistant
     # if set to False, the player will not be added to the HA integration
     expose_to_ha: bool = True
 
-    # icon: material design icon for this player
-    icon: str = "mdi-speaker"
+    # icon: identifier from the shared Music Assistant icon set
+    # (https://github.com/music-assistant/shared-icons) - clients render
+    # the artwork for this id and fall back to "speaker" for unknown ids
+    icon: str = "speaker"
 
     # group_volume: if the player is a player group or syncgroup master,
     # this will return the average volume of all child players
