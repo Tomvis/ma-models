@@ -414,6 +414,9 @@ class CrossfadeMode(StrEnum):
     SMART_CROSSFADE = "smart_crossfade"  # Use smart crossfade with beat matching and EQ filters
     STANDARD_CROSSFADE = "standard_crossfade"  # Use standard crossfade only
     DISABLED = "disabled"  # No crossfade
+    # The source crossfades its own playback, so the server does not. Distinct
+    # from DISABLED, which means nothing is crossfading at all.
+    SOURCE = "source"
     UNKNOWN = "unknown"
 
     @classmethod
@@ -458,6 +461,8 @@ class PlayerType(StrEnum):
              but does not play audio.
     visualizer: A device that visualizes music on a screen (e.g. animations, LED matrices).
     light: A device that visualizes music through lighting (e.g. Hue sync, WLED).
+    source: A capture-only device that provides audio input (e.g. a line-in client)
+            but does not render audio itself.
     """
 
     PLAYER = "player"
@@ -467,6 +472,7 @@ class PlayerType(StrEnum):
     DISPLAY = "display"
     VISUALIZER = "visualizer"
     LIGHT = "light"
+    SOURCE = "source"
     UNKNOWN = "unknown"
 
     @classmethod
@@ -601,6 +607,7 @@ class EventType(StrEnum):
     MEDIA_ITEM_ADDED = "media_item_added"
     MEDIA_ITEM_UPDATED = "media_item_updated"
     MEDIA_ITEM_DELETED = "media_item_deleted"
+    PLAYLOG_UPDATED = "playlog_updated"
     PROVIDERS_UPDATED = "providers_updated"
     # generic event emitted by a provider instance;
     # object_id = provider instance_id (optionally suffixed with /sub_scope),
@@ -782,6 +789,9 @@ class ConfigEntryType(StrEnum):
     # url: a clickable link; when returned from a config invoke_action response,
     # the frontend opens the value (one-shot) instead of rendering a field
     URL = "url"
+    # pairing_code: a short code (PIN) shown on a device that the user copies over
+    # during pairing; the entry's `format` field describes its shape
+    PAIRING_CODE = "pairing_code"
     UNKNOWN = "unknown"
 
     @classmethod
@@ -870,6 +880,10 @@ class VolumeNormalizationMode(StrEnum):
     FALLBACK_FIXED_GAIN = "fallback_fixed_gain"
     FIXED_GAIN = "fixed_gain"
     FALLBACK_DYNAMIC = "fallback_dynamic"
+    # The source delivers its audio at a loudness target of its own, so the
+    # server leaves the level alone. Distinct from DISABLED, which means nothing
+    # normalized it at all: this audio is normalized, just not by us.
+    SOURCE = "source"
 
     # fallback
     UNKNOWN = "unknown"

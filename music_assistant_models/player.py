@@ -9,8 +9,16 @@ from typing import Any
 
 from mashumaro import DataClassDictMixin, field_options
 
+from .audio_processing import ActiveSourceAudioDetails
 from .constants import EXTRA_ATTRIBUTES_TYPES, PLAYER_CONTROL_NONE
-from .enums import IdentifierType, MediaType, PlaybackState, PlayerFeature, PlayerType
+from .enums import (
+    IdentifierType,
+    MediaType,
+    PlaybackState,
+    PlayerFeature,
+    PlayerType,
+    RepeatMode,
+)
 from .media_items import MediaItemPalette
 from .translations import resolve_translation, translations_active
 from .unique_list import UniqueList
@@ -154,6 +162,19 @@ class PlayerSource(DataClassDictMixin):
     can_seek: bool = False
     # can_next_previous: this source can be skipped to next/previous item
     can_next_previous: bool = False
+    # can_shuffle/can_repeat: this source orders its own content, so the
+    # commands below reach the session producing the audio
+    can_shuffle: bool = False
+    can_repeat: bool = False
+    # the ordering the source reports for itself; None = it has not said
+    shuffle_enabled: bool | None = None
+    repeat_mode: RepeatMode | None = None
+    # the service account this source is signed in to, once established (e.g. a
+    # Spotify user id). Lives here as well as on AudioSource because a source the
+    # device runs natively has no AudioSource to carry it. None = not established,
+    # in which case anything gated on the account matching must refuse rather
+    # than guess.
+    account_id: str | None = None
 
     def __hash__(self) -> int:
         """Return custom hash."""
@@ -447,6 +468,11 @@ class Player(DataClassDictMixin):
     # sleep_timer_expires_at: unix (utc) timestamp at which the active sleep timer will
     # stop playback, or None if no sleep timer is currently set for this player
     sleep_timer_expires_at: float | None = None
+
+    # active_source_audio: effective audio details reported for the currently active
+    # (external) source, or None if the active source is Music Assistant itself or no
+    # details are available yet
+    active_source_audio: ActiveSourceAudioDetails | None = None
 
     #############################################################################
     # helper methods and properties                                             #

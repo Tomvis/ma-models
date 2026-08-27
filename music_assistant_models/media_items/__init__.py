@@ -31,7 +31,6 @@ from .media_item import (
     Radio,
     RecommendationFolder,
     SoundEffect,
-    SourceQueueCapabilities,
     Track,
 )
 from .metadata import (
@@ -42,6 +41,7 @@ from .metadata import (
     MediaItemLink,
     MediaItemMetadata,
     MediaItemPalette,
+    MediaItemTranscriptCue,
 )
 from .provider_mapping import ProviderMapping
 from .summary import (
@@ -85,6 +85,7 @@ __all__ = [
     "MediaItemMetadataSummary",
     "MediaItemPalette",
     "MediaItemSummaryType",
+    "MediaItemTranscriptCue",
     "MediaItemType",
     "Metadata",
     "MetadataProvider",
@@ -102,7 +103,6 @@ __all__ = [
     "RadioSummary",
     "RecommendationFolder",
     "SoundEffect",
-    "SourceQueueCapabilities",
     "SummaryDialect",
     "Track",
     "TrackSummary",

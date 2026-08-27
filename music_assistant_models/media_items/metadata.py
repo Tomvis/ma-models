@@ -42,7 +42,7 @@ class MediaItemLink(DataClassDictMixin):
     def __eq__(self, other: object) -> bool:
         """Check equality of two items."""
         if not isinstance(other, MediaItemLink):
-            return False
+            return NotImplemented
         return self.url == other.url
 
 
@@ -66,7 +66,7 @@ class MediaItemImage(DataClassDictMixin):
     def __eq__(self, other: object) -> bool:
         """Check equality of two items."""
         if not isinstance(other, MediaItemImage):
-            return False
+            return NotImplemented
         return self.__hash__() == other.__hash__()
 
     def __post_serialize__(self, d: dict[str, Any]) -> dict[str, Any]:
@@ -113,6 +113,16 @@ class MediaItemChapter(DataClassDictMixin):
     def __hash__(self) -> int:
         """Return custom hash."""
         return hash(self.position)
+
+
+@dataclass(frozen=True, kw_only=True)
+class MediaItemTranscriptCue(DataClassDictMixin):
+    """Model for a single timed cue of a MediaItem's transcript."""
+
+    start: float  # start position in seconds
+    end: float | None = None  # end position in seconds if known
+    text: str  # spoken text of this cue
+    speaker: str | None = None  # speaker name/label if the source identifies one
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -289,6 +299,12 @@ class MediaItemMetadata(DataClassDictMixin):
     copyright: str | None = None
     lyrics: str | None = None  # tracks only
     lrc_lyrics: str | None = None  # tracks only
+    # transcript of the spoken content, most commonly used for podcast episodes
+    transcript: str | None = None
+    # transcript split into timed cues, sorted by start position
+    transcript_cues: list[MediaItemTranscriptCue] | None = None
+    # whether a transcript is available, set to None if the provider cannot tell
+    has_transcript: bool | None = None
     label: str | None = None
     links: set[MediaItemLink] | None = None
     performers: set[str] | None = None
