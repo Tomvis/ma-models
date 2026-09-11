@@ -199,6 +199,18 @@ class RecommendationFolderType(StrEnum):
         return cls.DEFAULT
 
 
+class PlaylistMatchPolicy(StrEnum):
+    """Enum with playlist track match policies, from strictest to loosest.
+
+    Controls how loosely a substitute track may be matched on another provider once
+    a playlist entry's original source is confirmed unavailable.
+    """
+
+    EXACT = "exact"
+    SAME_RECORDING = "same_recording"
+    BEST_EFFORT = "best_effort"
+
+
 class ArtistType(StrEnum):
     """Enum for Artist type."""
 
@@ -245,6 +257,7 @@ class ContentType(StrEnum):
     WMA = "wma"  # Windows Media Audio
     WMAV2 = "wmav2"  # Windows Media Audio v2
     WMAPRO = "wmapro"  # Windows Media Audio Professional
+    WMALOSSLESS = "wmalossless"  # Windows Media Audio Lossless
     WAVPACK = "wavpack"  # WavPack lossless
     TAK = "tak"  # Tom's Lossless Audio Kompressor
     APE = "ape"  # Monkey's Audio
@@ -348,6 +361,7 @@ class ContentType(StrEnum):
             ContentType.WAVPACK,
             ContentType.TAK,
             ContentType.APE,
+            ContentType.WMALOSSLESS,
             ContentType.TRUEHD,
             ContentType.DSD_LSBF,
             ContentType.DSD_MSBF,
@@ -646,6 +660,9 @@ class ProviderFeature(StrEnum):
     SEARCH = "search"
     RECOMMENDATIONS = "recommendations"
 
+    # if the provider requires calls beyond searching to get other album versions
+    ALBUM_VERSIONS = "album_versions"
+
     # library feature per mediatype
     LIBRARY_ARTISTS = "library_artists"
     LIBRARY_ALBUMS = "library_albums"
@@ -736,6 +753,8 @@ class ProviderFeature(StrEnum):
     AUDIO_SOURCE = "audio_source"
     # provider can enumerate sound effect items (live, not library-backed)
     SOUND_EFFECTS = "sound_effects"
+    # provider records playback to an external listening history
+    SCROBBLE = "scrobble"
 
     #
     # OTHER FEATURES (plugin-only)
@@ -750,6 +769,24 @@ class ProviderFeature(StrEnum):
     def _missing_(cls, value: object) -> ProviderFeature:  # noqa: ARG003
         """Set default enum member if an unknown value is provided."""
         return cls.UNKNOWN
+
+
+class ProviderSharing(StrEnum):
+    """Who, besides its owner, a provider instance is shared with."""
+
+    # only the owner
+    PRIVATE = "private"
+    # the owner plus the users listed on the access record
+    SELECTED = "selected"
+    # every signed-in household member, guests excluded
+    MEMBERS = "members"
+    # every user, guests included
+    EVERYONE = "everyone"
+
+    @classmethod
+    def _missing_(cls, value: object) -> ProviderSharing:  # noqa: ARG003
+        """Fall back to PRIVATE (the safest value) for an unknown sharing mode."""
+        return cls.PRIVATE
 
 
 class ProviderType(StrEnum):
