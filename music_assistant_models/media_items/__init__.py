@@ -8,6 +8,7 @@ from typing import Any, TypeGuard
 
 from mashumaro import DataClassDictMixin
 
+from music_assistant_models.access import PlaylistAccess
 from music_assistant_models.enums import MediaType
 from music_assistant_models.errors import InvalidDataError
 from music_assistant_models.unique_list import UniqueList
@@ -70,7 +71,6 @@ __all__ = [
     "Audiobook",
     "AudiobookSummary",
     "BrowseFolder",
-    "Collection",
     "Genre",
     "GenreSummary",
     "ItemMapping",
@@ -87,14 +87,10 @@ __all__ = [
     "MediaItemSummaryType",
     "MediaItemTranscriptCue",
     "MediaItemType",
-    "Metadata",
-    "MetadataProvider",
-    "MetadataProviderStatus",
-    "MetadataProviderType",
     "PlayableMediaItemType",
     "Playlist",
+    "PlaylistAccess",
     "PlaylistSummary",
-    "PlaylistTrack",
     "Podcast",
     "PodcastEpisode",
     "PodcastSummary",

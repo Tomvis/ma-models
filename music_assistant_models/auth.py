@@ -12,11 +12,11 @@ from mashumaro.mixins.orjson import DataClassORJSONMixin
 
 class UserRole(StrEnum):
     """
-    The role id's of the builtin (default) user roles.
+    The role ids of the builtin user roles.
 
-    A role is identified by its (string) id, of which these are the builtin defaults.
-    User.role is deliberately a plain string and not limited to these values,
-    to allow for custom roles in the future.
+    A role is identified by its (string) id, of which these are the builtin roles.
+    Admins may create custom roles as well, so User.role is a plain string
+    and not limited to these values.
     """
 
     ADMIN = "admin"
@@ -85,6 +85,37 @@ class User(DataClassORJSONMixin):
     preferences: dict[str, Any] = field(default_factory=dict)
     provider_filter: list[str] = field(default_factory=list)
     player_filter: list[str] = field(default_factory=list)
+
+
+@dataclass
+class UserSummary(DataClassORJSONMixin):
+    """The public face of a user account, safe to serve to every member."""
+
+    user_id: str
+    username: str
+    display_name: str | None = None
+    avatar_url: str | None = None
+
+    @classmethod
+    def from_user(cls, user: User) -> UserSummary:
+        """Return the summary of the given user account."""
+        return cls(
+            user_id=user.user_id,
+            username=user.username,
+            display_name=user.display_name,
+            avatar_url=user.avatar_url,
+        )
+
+
+@dataclass
+class Role(DataClassORJSONMixin):
+    """A user role: a named set of scopes."""
+
+    role_id: str
+    name: str
+    scopes: list[Scope] = field(default_factory=list)
+    # builtin roles ship with Music Assistant and can not be changed or removed
+    builtin: bool = False
 
 
 @dataclass
