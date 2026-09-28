@@ -328,6 +328,9 @@ class MediaItemMetadata(DataClassDictMixin):
     dynamic_range: float | None = None
     # last_refresh: timestamp the (full) metadata was last collected
     last_refresh: int | None = None
+    # last_musicbrainz_lookup: timestamp the item was last looked up on MusicBrainz,
+    # set on every attempt, so an item MusicBrainz does not know is not retried endlessly
+    last_musicbrainz_lookup: int | None = None
 
     def update(
         self,
@@ -368,9 +371,10 @@ class MediaItemMetadata(DataClassDictMixin):
             elif new_val and fld.name in (
                 "popularity",
                 "last_refresh",
+                "last_musicbrainz_lookup",
             ):
                 # some fields are always allowed to be overwritten
-                # (such as popularity and last_refresh)
+                # (such as popularity and the refresh/lookup timestamps)
                 setattr(self, fld.name, new_val)
             elif fld.name == "critical_reception" and isinstance(cur_val, CriticalReception):
                 # CR is a structured nested field: deep-merge rather than wholesale
