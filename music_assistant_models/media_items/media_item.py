@@ -239,7 +239,7 @@ class MediaItem(_MediaItemBase):
     # Used for "newest first" sorting in dedicated listen-later views.
     listen_later_added_at: int | None = None
     position: int | None = None  # required for playlist tracks, optional for all other
-    date_added: datetime | None = None  # when item was added to library/collection
+    date_added: datetime | None = None  # added to library, or to the playlist for playlist tracks
 
     def __hash__(self) -> int:
         """Return hash of MediaItem."""
