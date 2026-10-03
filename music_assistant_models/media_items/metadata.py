@@ -212,6 +212,9 @@ class ReviewSourceEntry(DataClassDictMixin):
     links: list[ReviewLink] | None = None
     # authors: contributing reviewer/list-pick author names
     authors: list[str] | None = None
+    # review: the review's full text, plain with blank-line paragraph breaks
+    # (TAG_SCHEMA_VERSION 3.6.0+, the <SRC>_REVIEW tag)
+    review: str | None = None
 
     # DEPRECATED (TAG_SCHEMA_VERSION <= 3.1.1): the separate review-kind / award-label
     # lists, superseded by the merged ``accolades`` field above. Still accepted on the

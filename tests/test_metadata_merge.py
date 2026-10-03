@@ -106,3 +106,18 @@ def test_update_popularity_zero_fills_empty_gap() -> None:
     incoming = MediaItemMetadata(popularity=0)
     stored.update(incoming)
     assert stored.popularity == 0
+
+
+def test_update_takes_incoming_review_text_per_source() -> None:
+    """A re-probe carrying a source's review text replaces that source's stored entry."""
+    stored = MediaItemMetadata(critical_reception=_cr(ReviewSourceEntry(source="AMG", rating=4.0)))
+    incoming = MediaItemMetadata(
+        critical_reception=_cr(
+            ReviewSourceEntry(source="AMG", rating=4.0, review="Riffs.\n\nMore.")
+        )
+    )
+    stored.update(incoming)
+    assert stored.critical_reception is not None
+    assert stored.critical_reception.sources is not None
+    assert stored.critical_reception.sources[0].review == "Riffs.\n\nMore."
+    assert ReviewSourceEntry.from_dict({"source": "TPS", "review": "Prog."}).review == "Prog."
