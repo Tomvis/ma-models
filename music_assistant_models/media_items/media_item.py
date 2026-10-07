@@ -497,9 +497,12 @@ class PodcastEpisode(MediaItem):
     __hash__ = _MediaItemBase.__hash__
     __eq__ = _MediaItemBase.__eq__
 
-    position: int  # sort position / episode number (set to 0 if unknown)
+    position: int  # sort position (set to 0 if unknown)
     podcast: Podcast | ItemMapping
     duration: int = 0
+    # the publisher's own episode and season number, None when it does not number them
+    episode_number: int | None = None
+    season: int | None = None
 
     # resume point info
     # set to None if unknown/unsupported by provider
@@ -649,6 +652,7 @@ def _deserialize_recommendation_items(
         MediaType.PODCAST_EPISODE: PodcastEpisode,
         MediaType.GENRE: Genre,
         MediaType.AUDIO_SOURCE: AudioSource,
+        MediaType.COLLECTION: MediaCollection,
     }
     result: list[MediaItem | ItemMapping | BrowseFolder] = []
     for item in raw:
