@@ -427,6 +427,8 @@ class CrossfadeMode(StrEnum):
 
     SMART_CROSSFADE = "smart_crossfade"  # Use smart crossfade with beat matching and EQ filters
     STANDARD_CROSSFADE = "standard_crossfade"  # Use standard crossfade only
+    # Applied by the server for an item that declares a tail overlap; never a user setting.
+    VOICE_OVER = "voice_over"  # Spoken tail over the next item's start, that item ducked under it
     DISABLED = "disabled"  # No crossfade
     # The source crossfades its own playback, so the server does not. Distinct
     # from DISABLED, which means nothing is crossfading at all.
@@ -724,6 +726,7 @@ class ProviderFeature(StrEnum):
 
     # playlist-specific features
     PLAYLIST_TRACKS_EDIT = "playlist_tracks_edit"
+    PLAYLIST_TRACKS_MOVE = "playlist_tracks_move"  # tracks of a playlist can be reordered
     # PLAYLIST_CREATE is deprecated: replaced by PLAYLIST_CREATE_TRACKS (and others)
     # TODO: remove this after 2.8 release
     PLAYLIST_CREATE = "playlist_create"
@@ -1033,7 +1036,11 @@ class ProviderStatus(StrEnum):
 
 
 class SortField(StrEnum):
-    """Sort fields available for media listings."""
+    """
+    Sort fields available for media listings.
+
+    RANDOM, RANDOM_PLAY_COUNT and ORIGINAL carry no direction.
+    """
 
     NAME = "name"
     SORT_NAME = "sort_name"
@@ -1047,6 +1054,11 @@ class SortField(StrEnum):
     ARTIST_NAME = "artist_name"
     RANDOM = "random"
     RANDOM_PLAY_COUNT = "random_play_count"
+    TRACK_NUMBER = "track_number"  # disc number, then track number
+    ALBUM_NAME = "album_name"  # the album a track belongs to
+    PROVIDER = "provider"  # the provider the item comes from
+    FAVORITE_TIMESTAMP = "favorite_timestamp"  # when the calling user liked the item
+    ORIGINAL = "original"  # the order the source lists the items in
 
 
 class SortDirection(StrEnum):
@@ -1054,3 +1066,33 @@ class SortDirection(StrEnum):
 
     ASC = "asc"
     DESC = "desc"
+
+
+class ListingType(StrEnum):
+    """The listings a client can ask the sort options for (music/sort_options)."""
+
+    LIBRARY_ARTISTS = "library_artists"  # the artists in the library
+    LIBRARY_ALBUMS = "library_albums"  # the albums in the library
+    LIBRARY_TRACKS = "library_tracks"  # the tracks in the library
+    LIBRARY_PLAYLISTS = "library_playlists"  # the playlists in the library
+    LIBRARY_RADIOS = "library_radios"  # the radio stations in the library
+    LIBRARY_AUDIOBOOKS = "library_audiobooks"  # the audiobooks in the library
+    LIBRARY_PODCASTS = "library_podcasts"  # the podcasts in the library
+    LIBRARY_GENRES = "library_genres"  # the genres in the library
+    ALBUM_TRACKS = "album_tracks"  # the tracks of an album
+    ARTIST_ALBUMS = "artist_albums"  # the albums of an artist
+    ARTIST_TRACKS = "artist_tracks"  # the tracks of an artist
+    ARTIST_APPEARS_ON = "artist_appears_on"  # albums the artist is on, but not as album artist
+    ARTIST_DISCOGRAPHY = "artist_discography"  # every album, EP and single credited to the artist
+    ARTIST_TOP_TRACKS = "artist_top_tracks"  # the top tracks of an artist
+    ARTIST_TOP_ALBUMS = "artist_top_albums"  # the top albums of an artist
+    ARTIST_AUDIOBOOKS = "artist_audiobooks"  # the audiobooks of an author or narrator
+    SIMILAR_ARTISTS = "similar_artists"  # the artists similar to an artist
+    SIMILAR_TRACKS = "similar_tracks"  # the tracks similar to a track
+    TRACK_ALBUMS = "track_albums"  # the albums a track appears on
+    VERSIONS = "versions"  # versions of a track, album, podcast, audiobook or radio
+    PLAYLIST_TRACKS = "playlist_tracks"  # the tracks of a playlist
+    PODCAST_EPISODES = "podcast_episodes"  # the episodes of a podcast
+    GENRE_TRACKS = "genre_tracks"  # the tracks of a genre
+    GENRE_ALBUMS = "genre_albums"  # the albums of a genre
+    BROWSE = "browse"  # the items in a browse folder

@@ -380,7 +380,7 @@ class Track(MediaItem):
     @property
     def image(self) -> MediaItemImage | None:
         """Return (first) image from metadata (prefer album)."""
-        if isinstance(self.album, Album) and self.album.image:
+        if self.album is not None and self.album.image:
             return self.album.image
         return super().image
 

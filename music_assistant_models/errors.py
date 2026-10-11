@@ -285,6 +285,17 @@ class UserNotFoundError(MusicAssistantError):
     translation_key = "user_not_found"
 
 
+class InvalidConfigValueError(InvalidDataError, ValueError):
+    """
+    Error raised when a config entry rejects a value.
+
+    It is also a ValueError, so callers may catch it as one.
+    """
+
+    error_code = 28
+    translation_key = "invalid_config_value"
+
+
 # Fork-only errors live at 1000+ so upstream can keep extending its own sequence
 # without colliding. It already did once: this fork held 27/28, 1.1.194 gave 27 to
 # UserNotFoundError, and because __init_subclass__ writes ERROR_MAP[error_code]
