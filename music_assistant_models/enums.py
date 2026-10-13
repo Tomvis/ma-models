@@ -1059,6 +1059,11 @@ class SortField(StrEnum):
     PROVIDER = "provider"  # the provider the item comes from
     FAVORITE_TIMESTAMP = "favorite_timestamp"  # when the calling user liked the item
     ORIGINAL = "original"  # the order the source lists the items in
+    # fork: album-only sorts on the review/analysis metadata and the listen-later shelf
+    DR = "dr"  # measured album dynamic range
+    AMG_RATING = "amg_rating"  # Angry Metal Guy review score
+    TPS_RATING = "tps_rating"  # The Prog Space review score
+    LISTEN_LATER_ADDED_AT = "listen_later_added_at"  # when the calling user shelved the album
 
 
 class SortDirection(StrEnum):
