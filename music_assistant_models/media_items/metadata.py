@@ -216,6 +216,9 @@ class ReviewSourceEntry(DataClassDictMixin):
     # review: the review's full text, plain with blank-line paragraph breaks
     # (TAG_SCHEMA_VERSION 3.6.0+, the <SRC>_REVIEW tag)
     review: str | None = None
+    # review_type: the post type ``review`` came from: "review", "tymhm", "rfu",
+    # "ymio" or "lit" (TAG_SCHEMA_VERSION 3.8.0+, the <SRC>_REVIEW_TYPE tag)
+    review_type: str | None = None
 
     # DEPRECATED (TAG_SCHEMA_VERSION <= 3.1.1): the separate review-kind / award-label
     # lists, superseded by the merged ``accolades`` field above. Still accepted on the

@@ -121,3 +121,10 @@ def test_update_takes_incoming_review_text_per_source() -> None:
     assert stored.critical_reception.sources is not None
     assert stored.critical_reception.sources[0].review == "Riffs.\n\nMore."
     assert ReviewSourceEntry.from_dict({"source": "TPS", "review": "Prog."}).review == "Prog."
+
+
+def test_review_type_round_trips() -> None:
+    """The post type of a source's review text survives the wire (MUSIC-182)."""
+    entry = ReviewSourceEntry.from_dict({"source": "TPS", "review": "Prog.", "review_type": "rfu"})
+    assert entry.review_type == "rfu"
+    assert ReviewSourceEntry.from_dict(entry.to_dict()).review_type == "rfu"
