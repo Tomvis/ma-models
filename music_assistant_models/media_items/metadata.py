@@ -116,6 +116,17 @@ class MediaItemChapter(DataClassDictMixin):
 
 
 @dataclass(frozen=True, kw_only=True)
+class MediaItemBookmark(DataClassDictMixin):
+    """Model for a user's bookmark on one provider copy of a MediaItem."""
+
+    name: str
+    start: float
+    provider_instance: str
+    item_id: str
+    stored_by_music_assistant: bool = False
+
+
+@dataclass(frozen=True, kw_only=True)
 class MediaItemTranscriptCue(DataClassDictMixin):
     """Model for a single timed cue of a MediaItem's transcript."""
 
@@ -357,7 +368,8 @@ class MediaItemMetadata(DataClassDictMixin):
         for fld in fields(self):
             if fld.name in ("description", "description_language"):
                 continue
-            new_val = getattr(new_values, fld.name)
+            # a subclass, such as MediaCollectionMetadata, may have fields new_values lacks
+            new_val = getattr(new_values, fld.name, None)
             if new_val is None:
                 continue
             cur_val = getattr(self, fld.name)
@@ -409,3 +421,18 @@ class MediaItemMetadata(DataClassDictMixin):
         if not self.images:
             self.images = UniqueList()
         self.images.append(image)
+
+
+@dataclass(kw_only=True)
+class MediaCollectionMetadata(MediaItemMetadata):
+    """
+    Model for a MediaCollection's metadata.
+
+    Computed over all items of the collection, so it stays the same when the collection
+    holds a filtered subset of them. A field is None when unknown.
+    """
+
+    total_items: int | None = None
+    duration: int | None = None
+    fully_played: bool | None = None
+    in_progress: bool | None = None
