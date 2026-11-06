@@ -1019,6 +1019,21 @@ class ProviderStage(StrEnum):
         return cls.STABLE
 
 
+class ProviderTier(StrEnum):
+    """Enum with possible Provider maintainer tiers."""
+
+    # core: built and maintained by the Music Assistant team
+    CORE = "core"
+
+    # community: built and maintained by a community member
+    COMMUNITY = "community"
+
+    @classmethod
+    def _missing_(cls, value: object) -> ProviderTier:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.COMMUNITY
+
+
 class ProviderIconVariant(StrEnum):
     """Enum of provider icon variants that a provider can supply."""
 
@@ -1082,6 +1097,7 @@ class SortField(StrEnum):
     PROVIDER = "provider"  # the provider the item comes from
     FAVORITE_TIMESTAMP = "favorite_timestamp"  # when the calling user liked the item
     ORIGINAL = "original"  # the order the source lists the items in
+    RELEASE_DATE = "release_date"  # full release date, falling back to the release year
     # fork: album-only sorts on the review/analysis metadata and the listen-later shelf
     DR = "dr"  # measured album dynamic range
     AMG_RATING = "amg_rating"  # Angry Metal Guy review score
