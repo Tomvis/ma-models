@@ -469,6 +469,7 @@ class Audiobook(MediaItem):
     # which will let MA fallback to an internal resume point
     fully_played: bool | None = None
     resume_position_ms: int | None = None
+    resume_position_timestamp: datetime | None = None
 
     media_type: MediaType = MediaType.AUDIOBOOK
 
@@ -509,6 +510,7 @@ class PodcastEpisode(MediaItem):
     # which will let MA fallback to an internal resume point
     fully_played: bool | None = None
     resume_position_ms: int | None = None
+    resume_position_timestamp: datetime | None = None
 
     media_type: MediaType = MediaType.PODCAST_EPISODE
 
