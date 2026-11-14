@@ -219,6 +219,11 @@ class ArtistType(StrEnum):
     NARRATOR = "narrator"  # narrator of an audiobook
     UNKNOWN = "unknown"
 
+    @classmethod
+    def _missing_(cls, value: object) -> ArtistType:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.UNKNOWN
+
 
 class ArtistEntityType(StrEnum):
     """Enum for Artist entity type (mirrors MusicBrainz artist type)."""
@@ -683,6 +688,8 @@ class EventType(StrEnum):
     MUSIC_SYNC_COMPLETED = "music_sync_completed"
     AUTH_SESSION = "auth_session"
     CORE_STATE_UPDATED = "core_state_updated"
+    # community_catalog_updated: the community catalog, or what is installed from it, changed
+    COMMUNITY_CATALOG_UPDATED = "community_catalog_updated"
     SHUTDOWN = "application_shutdown"  # deprecated: replaced by "core_state_updated"
     UNKNOWN = "unknown"
 
@@ -1093,6 +1100,8 @@ class ProviderStatus(StrEnum):
     INCOMPATIBLE = "incompatible"
     # error: setup failed for any other reason (see the provider's last_error)
     ERROR = "error"
+    # unavailable: the provider's code is not on this server (see the provider's last_error)
+    UNAVAILABLE = "unavailable"
 
 
 class SortField(StrEnum):
