@@ -488,7 +488,10 @@ class PlayerType(StrEnum):
     """Enum with possible Player Types.
 
     player: A regular player with native (vendor-specific) support.
-    stereo_pair: Same as player but a dedicated stereo pair of 2 speakers.
+    multi_channel: One player made of several speakers that play as one
+                   (e.g. a stereo pair or a home theater set).
+    stereo_pair: A stereo pair as an older server reports it;
+                 a current server sends multi_channel.
     group: A (dedicated) (sync)group player or (universal) playergroup.
     protocol: A generic protocol player (e.g. AirPlay/Chromecast/DLNA) without native support.
               These are wrapped by a Universal Player and hidden from the UI.
@@ -498,9 +501,12 @@ class PlayerType(StrEnum):
     light: A device that visualizes music through lighting (e.g. Hue sync, WLED).
     source: A capture-only device that provides audio input (e.g. a line-in client)
             but does not render audio itself.
+    controller: A device that only controls playback (e.g. a remote or a volume knob)
+                but does not play audio.
     """
 
     PLAYER = "player"
+    MULTI_CHANNEL = "multi_channel"
     STEREO_PAIR = "stereo_pair"
     GROUP = "group"
     PROTOCOL = "protocol"
@@ -508,10 +514,71 @@ class PlayerType(StrEnum):
     VISUALIZER = "visualizer"
     LIGHT = "light"
     SOURCE = "source"
+    CONTROLLER = "controller"
     UNKNOWN = "unknown"
 
     @classmethod
     def _missing_(cls, value: object) -> PlayerType:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.UNKNOWN
+
+
+class ChannelLayout(StrEnum):
+    """
+    Enum with the speaker layouts of a multi-channel player.
+
+    A layout names the number of full-range speakers and of subwoofers of the set,
+    in the notation of home theater sets (5.1); a set of two speakers is stereo.
+    """
+
+    STEREO = "stereo"
+    LAYOUT_1_1 = "1.1"
+    LAYOUT_2_1 = "2.1"
+    LAYOUT_3_0 = "3.0"
+    LAYOUT_3_1 = "3.1"
+    LAYOUT_4_0 = "4.0"
+    LAYOUT_4_1 = "4.1"
+    LAYOUT_5_0 = "5.0"
+    LAYOUT_5_1 = "5.1"
+    LAYOUT_7_1 = "7.1"
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> ChannelLayout:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.UNKNOWN
+
+
+class SpeakerChannel(StrEnum):
+    """
+    Enum with the channel a speaker of a multi-channel player plays.
+
+    The names are the speaker positions of the FLAC channel mask (RFC 9639), as the
+    Sendspin specification uses them.
+    """
+
+    FRONT_LEFT = "front_left"
+    FRONT_RIGHT = "front_right"
+    FRONT_CENTER = "front_center"
+    LFE = "lfe"
+    BACK_LEFT = "back_left"
+    BACK_RIGHT = "back_right"
+    FRONT_LEFT_OF_CENTER = "front_left_of_center"
+    FRONT_RIGHT_OF_CENTER = "front_right_of_center"
+    BACK_CENTER = "back_center"
+    SIDE_LEFT = "side_left"
+    SIDE_RIGHT = "side_right"
+    TOP_CENTER = "top_center"
+    TOP_FRONT_LEFT = "top_front_left"
+    TOP_FRONT_CENTER = "top_front_center"
+    TOP_FRONT_RIGHT = "top_front_right"
+    TOP_REAR_LEFT = "top_rear_left"
+    TOP_REAR_CENTER = "top_rear_center"
+    TOP_REAR_RIGHT = "top_rear_right"
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> SpeakerChannel:  # noqa: ARG003
         """Set default enum member if an unknown value is provided."""
         return cls.UNKNOWN
 
@@ -687,6 +754,8 @@ class EventType(StrEnum):
     DASHBOARD_SESSIONS_UPDATED = "dashboard_sessions_updated"
     MUSIC_SYNC_COMPLETED = "music_sync_completed"
     AUTH_SESSION = "auth_session"
+    # auth_signin_methods_updated: the sign-in methods the login page can offer changed
+    AUTH_SIGNIN_METHODS_UPDATED = "auth_signin_methods_updated"
     CORE_STATE_UPDATED = "core_state_updated"
     # community_catalog_updated: the community catalog, or what is installed from it, changed
     COMMUNITY_CATALOG_UPDATED = "community_catalog_updated"
@@ -732,6 +801,9 @@ class ProviderFeature(StrEnum):
     AUDIOBOOK_BOOKMARKS_EDIT = "audiobook_bookmarks_edit"
     PODCAST_EPISODE_BOOKMARKS = "podcast_episode_bookmarks"
     PODCAST_EPISODE_BOOKMARKS_EDIT = "podcast_episode_bookmarks_edit"
+
+    # public playlists created by an artist on the music provider
+    ARTIST_PLAYLISTS = "artist_playlists"
 
     # if we can grab all albums for an artist from the music provider
     ARTIST_ALBUMS = "artist_albums"
@@ -795,6 +867,7 @@ class ProviderFeature(StrEnum):
     REMOVE_PLAYER = "remove_player"
     CREATE_GROUP_PLAYER = "create_group_player"
     REMOVE_GROUP_PLAYER = "remove_group_player"
+    CREATE_MULTI_CHANNEL_PLAYER = "create_multi_channel_player"
 
     #
     # METADATAPROVIDER FEATURES
@@ -806,9 +879,14 @@ class ProviderFeature(StrEnum):
     LYRICS = "lyrics"  # lyrics support - can also be provided by a music provider
 
     #
+    # AUDIO SOURCE FEATURES (any provider type)
+    #
+    # provider delivers live audio sources (AudioSource items), such as a receiver or a line-in
+    AUDIO_SOURCE = "audio_source"
+
+    #
     # PLUGIN FEATURES
     #
-    AUDIO_SOURCE = "audio_source"
     # provider can enumerate sound effect items (live, not library-backed)
     SOUND_EFFECTS = "sound_effects"
     # provider records playback to an external listening history
@@ -856,6 +934,7 @@ class ProviderType(StrEnum):
     PLUGIN = "plugin"
     CORE = "core"
     AUDIO_ANALYSIS = "audio_analysis"
+    AUTH = "auth"
 
     # fallback
     UNKNOWN = "unknown"
@@ -1069,6 +1148,45 @@ class ProviderIconVariant(StrEnum):
     DEFAULT = "default"
     DARK = "dark"
     MONOCHROME = "monochrome"
+
+
+class ProviderOffering(StrEnum):
+    """Enum of what a provider offers, as declared in its manifest for discovery."""
+
+    # the media types a music provider offers in every config, the same values as MediaType
+    ARTIST = "artist"
+    ALBUM = "album"
+    TRACK = "track"
+    PLAYLIST = "playlist"
+    RADIO = "radio"
+    PODCAST = "podcast"
+    AUDIOBOOK = "audiobook"
+    SOUND_EFFECT = "sound_effect"
+
+    # audio_source: plays audio into Music Assistant as a live source in every config
+    AUDIO_SOURCE = "audio_source"
+    # ai: provides AI engines (text, plus image where the service has image models)
+    AI = "ai"
+    # tts: provides speech engines
+    TTS = "tts"
+    # scrobble: records what is played to an outside listening history
+    SCROBBLE = "scrobble"
+    # assistant: lets an AI or voice assistant find music and control players
+    ASSISTANT = "assistant"
+    # visualizer: turns music into light effects or visuals
+    VISUALIZER = "visualizer"
+    # recommendations: builds playlists, mixes or recommendations from your music
+    RECOMMENDATIONS = "recommendations"
+    # fun: party modes and games for guests
+    FUN = "fun"
+
+    # fallback
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> ProviderOffering:  # noqa: ARG003
+        """Set default enum member if an unknown value is provided."""
+        return cls.UNKNOWN
 
 
 class CoreState(StrEnum):

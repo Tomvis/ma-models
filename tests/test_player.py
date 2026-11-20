@@ -2,6 +2,7 @@
 
 from music_assistant_models.audio_processing import ActiveSourceAudioDetails, AudioOutputDetails
 from music_assistant_models.enums import (
+    ChannelLayout,
     ContentType,
     CrossfadeMode,
     IdentifierType,
@@ -10,6 +11,7 @@ from music_assistant_models.enums import (
     ProtocolRole,
     RepeatMode,
     SleepTimerMode,
+    SpeakerChannel,
 )
 from music_assistant_models.media_items import AudioFormat
 from music_assistant_models.player import (
@@ -40,6 +42,39 @@ def test_player_type_source_resolves() -> None:
     """The SOURCE member resolves; an unknown value falls back to UNKNOWN."""
     assert PlayerType("source") is PlayerType.SOURCE
     assert PlayerType("does-not-exist") is PlayerType.UNKNOWN
+
+
+def test_player_type_controller_resolves() -> None:
+    """The CONTROLLER member resolves."""
+    assert PlayerType("controller") is PlayerType.CONTROLLER
+
+
+def test_player_type_multi_channel_resolves() -> None:
+    """The MULTI_CHANNEL member resolves, and so does the STEREO_PAIR of an older server."""
+    assert PlayerType("multi_channel") is PlayerType.MULTI_CHANNEL
+    assert PlayerType("stereo_pair") is PlayerType.STEREO_PAIR
+
+
+def test_channel_layout_roundtrip_and_legacy_payload() -> None:
+    """The layout roundtrips, an unknown layout falls back and older payloads lack the key."""
+    player = _player()
+    assert player.channel_layout is None
+    player.channel_layout = ChannelLayout.LAYOUT_5_1
+    payload = player.to_dict()
+    assert payload["channel_layout"] == "5.1"
+    assert Player.from_dict(payload).channel_layout is ChannelLayout.LAYOUT_5_1
+    payload["channel_layout"] = "22.2"
+    assert Player.from_dict(payload).channel_layout is ChannelLayout.UNKNOWN
+    payload.pop("channel_layout")
+    assert Player.from_dict(payload).channel_layout is None
+
+
+def test_speaker_channel_names_and_unknown() -> None:
+    """A speaker channel uses the spec's name, and an unknown name falls back."""
+    assert SpeakerChannel("front_left") is SpeakerChannel.FRONT_LEFT
+    assert SpeakerChannel("lfe") is SpeakerChannel.LFE
+    assert SpeakerChannel("top_rear_right") is SpeakerChannel.TOP_REAR_RIGHT
+    assert SpeakerChannel("wide_left") is SpeakerChannel.UNKNOWN
 
 
 def test_stream_duration_defaults_to_none() -> None:

@@ -566,14 +566,14 @@ class SoundEffect(_LocalizableName, MediaItem):
 @dataclass(kw_only=True)
 class AudioSource(MediaItem):
     """
-    Model for a live audio source provided by a plugin.
+    Model for a live audio source, delivered by a provider with ProviderFeature.AUDIO_SOURCE.
 
     Examples include an AirPlay receiver, Spotify Connect device,
     DLNA renderer, VBAN receiver, or a hardware bridge favorite.
 
     Conceptually behaves like a live media item (similar to Radio):
     enqueued as a single queue item, streamed continuously, with
-    optional metadata updates pushed by the owning plugin.
+    optional metadata updates pushed by the owning provider.
     """
 
     __hash__ = _MediaItemBase.__hash__
@@ -611,6 +611,11 @@ class AudioSource(MediaItem):
     # plugin's get_stream_details must raise (AudioError) when it cannot
     # actually acquire the upstream producer.
     can_initiate: bool = False
+
+    # whether audio analysis providers may be offered the audio of this source
+    # True = a live input the user feeds in (e.g. a line-in or turntable)
+    # False (default) = e.g. what a streaming service delivers to a receiver
+    allow_audio_analysis: bool = False
 
     # the service account the session is paired to, once known/verified
     # (e.g. the Spotify user id); used to gate playback redirects
@@ -695,6 +700,8 @@ class RecommendationFolder(BrowseFolder):
     enabled_by_default: bool = True
     # whether this row's items endpoint accepts a source-provider filter
     supports_provider_filter: bool = False
+    # whether this row's items endpoint can leave out fully played items
+    supports_hide_played: bool = False
 
     @property
     def _translation_group(self) -> str:
